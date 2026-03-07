@@ -2,10 +2,9 @@ package notifications
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/model"
 )
 
@@ -17,30 +16,6 @@ func New(client *sdk.Client) *Service {
 
 type Service struct {
 	client *sdk.Client
-}
-
-// --- Response Types ---
-
-type NotificationsResponse struct {
-	Notifications []*model.Notification `json:"notifications"`
-	UnreadCount   int                   `json:"unread_count,omitempty"`
-	TotalCount    int                   `json:"total_count,omitempty"`
-}
-
-type TodosResponse struct {
-	TodoList []*model.TodoItem `json:"todo_list"`
-}
-
-type AlertMessagesResponse struct {
-	Data []interface{} `json:"data"`
-}
-
-type AnnouncementsResponse struct {
-	Announcements []*model.Announcement `json:"announcements"`
-}
-
-type BulletinsResponse struct {
-	Bulletins []*model.Bulletin `json:"bulletins"`
 }
 
 // --- Notifications ---
@@ -96,9 +71,9 @@ func (s *Service) ListLatestBulletins(ctx context.Context) (*BulletinsResponse, 
 }
 
 // GetBulletin returns a specific bulletin.
-func (s *Service) GetBulletin(ctx context.Context, bulletinID int) (*model.Bulletin, error) {
+func (s *Service) GetBulletin(ctx context.Context, bulletinID int) (*Bulletin, error) {
 	u := fmt.Sprintf("/api/bulletins/%d", bulletinID)
-	result := new(model.Bulletin)
+	result := new(Bulletin)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
@@ -111,9 +86,9 @@ func (s *Service) MarkBulletinRead(ctx context.Context, bulletinID int, orgID in
 }
 
 // CreateBulletin creates a new bulletin (instructor).
-func (s *Service) CreateBulletin(ctx context.Context, courseID int, body interface{}) (*model.Bulletin, error) {
+func (s *Service) CreateBulletin(ctx context.Context, courseID int, body CreateBulletinRequest) (*Bulletin, error) {
 	u := fmt.Sprintf("/api/course/bulletins/%d", courseID)
-	result := new(model.Bulletin)
+	result := new(Bulletin)
 	_, err := s.client.Post(ctx, u, body, result)
 	return result, err
 }
@@ -163,24 +138,24 @@ func (s *Service) ListLatestOrgBulletins(ctx context.Context) (*BulletinsRespons
 }
 
 // GetOrgBulletin returns a specific org bulletin.
-func (s *Service) GetOrgBulletin(ctx context.Context, bulletinID int) (*model.Bulletin, error) {
+func (s *Service) GetOrgBulletin(ctx context.Context, bulletinID int) (*Bulletin, error) {
 	u := fmt.Sprintf("/api/org-bulletin/bulletins/%d", bulletinID)
-	result := new(model.Bulletin)
+	result := new(Bulletin)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // CreateOrgBulletin creates an organization bulletin.
-func (s *Service) CreateOrgBulletin(ctx context.Context, body interface{}) (*model.Bulletin, error) {
-	result := new(model.Bulletin)
+func (s *Service) CreateOrgBulletin(ctx context.Context, body OrgBulletinRequest) (*Bulletin, error) {
+	result := new(Bulletin)
 	_, err := s.client.Post(ctx, "/api/org-bulletin/bulletins", body, result)
 	return result, err
 }
 
 // UpdateOrgBulletin updates an organization bulletin.
-func (s *Service) UpdateOrgBulletin(ctx context.Context, bulletinID int, body interface{}) (*model.Bulletin, error) {
+func (s *Service) UpdateOrgBulletin(ctx context.Context, bulletinID int, body OrgBulletinRequest) (*Bulletin, error) {
 	u := fmt.Sprintf("/api/org-bulletin/bulletins/%d", bulletinID)
-	result := new(model.Bulletin)
+	result := new(Bulletin)
 	_, err := s.client.Put(ctx, u, body, result)
 	return result, err
 }
@@ -200,18 +175,13 @@ func (s *Service) MarkOrgBulletinRead(ctx context.Context, bulletinID int) error
 }
 
 // ListOrgBulletinClassifications returns org bulletin classifications.
-func (s *Service) ListOrgBulletinClassifications(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
+func (s *Service) ListOrgBulletinClassifications(ctx context.Context) ([]*OrgBulletinClassification, error) {
+	var result []*OrgBulletinClassification
 	_, err := s.client.Get(ctx, "/api/org-bulletin/classifications", &result)
 	return result, err
 }
 
 // --- Latest Activities ---
-
-// LatestActivitiesResponse represents the latest activities response.
-type LatestActivitiesResponse struct {
-	Activities []*model.Activity `json:"activities,omitempty"`
-}
 
 // ListLatestActivities returns the latest activities (material, web_link, slide, online_video, page).
 func (s *Service) ListLatestActivities(ctx context.Context) (*LatestActivitiesResponse, error) {

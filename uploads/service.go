@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
 
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/model"
 )
 
@@ -24,25 +24,18 @@ type Service struct {
 	client *sdk.Client
 }
 
-// --- Response Types ---
-
-type UploadsListResponse struct {
-	Uploads []*model.Upload `json:"uploads"`
-	model.Pagination
-}
-
 // --- Upload Operations ---
 
 // GetUpload returns information about an uploaded file.
-func (s *Service) GetUpload(ctx context.Context, uploadID int) (*model.Upload, error) {
+func (s *Service) GetUpload(ctx context.Context, uploadID int) (*Upload, error) {
 	u := fmt.Sprintf("/api/uploads/%d", uploadID)
-	result := new(model.Upload)
+	result := new(Upload)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // UploadFile uploads a file from disk.
-func (s *Service) UploadFile(ctx context.Context, filePath string, params map[string]string) (*model.Upload, error) {
+func (s *Service) UploadFile(ctx context.Context, filePath string, params map[string]string) (*Upload, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -53,7 +46,7 @@ func (s *Service) UploadFile(ctx context.Context, filePath string, params map[st
 }
 
 // UploadReader uploads a file from a reader.
-func (s *Service) UploadReader(ctx context.Context, reader io.Reader, filename string, params map[string]string) (*model.Upload, error) {
+func (s *Service) UploadReader(ctx context.Context, reader io.Reader, filename string, params map[string]string) (*Upload, error) {
 	pr, pw := io.Pipe()
 	writer := multipart.NewWriter(pw)
 
@@ -90,7 +83,7 @@ func (s *Service) UploadReader(ctx context.Context, reader io.Reader, filename s
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("Accept", "application/json")
 
-	result := new(model.Upload)
+	result := new(Upload)
 	_, err = s.client.Do(req, result)
 	return result, err
 }
@@ -103,9 +96,9 @@ func (s *Service) DeleteUpload(ctx context.Context, uploadID int) error {
 }
 
 // UpdateUpload updates upload metadata.
-func (s *Service) UpdateUpload(ctx context.Context, uploadID int, body interface{}) (*model.Upload, error) {
+func (s *Service) UpdateUpload(ctx context.Context, uploadID int, body interface{}) (*Upload, error) {
 	u := fmt.Sprintf("/api/uploads/%d", uploadID)
-	result := new(model.Upload)
+	result := new(Upload)
 	_, err := s.client.Put(ctx, u, body, result)
 	return result, err
 }
@@ -113,7 +106,7 @@ func (s *Service) UpdateUpload(ctx context.Context, uploadID int, body interface
 // --- Upload References ---
 
 // UploadReference uploads a reference file for an activity.
-func (s *Service) UploadReference(ctx context.Context, filePath string, activityID int) (*model.Upload, error) {
+func (s *Service) UploadReference(ctx context.Context, filePath string, activityID int) (*Upload, error) {
 	return s.UploadFile(ctx, filePath, map[string]string{
 		"parent_id":   fmt.Sprintf("%d", activityID),
 		"parent_type": "materialactivity",
@@ -121,9 +114,9 @@ func (s *Service) UploadReference(ctx context.Context, filePath string, activity
 }
 
 // CreateReference creates a reference link.
-func (s *Service) CreateReference(ctx context.Context, body interface{}) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Post(ctx, "/api/uploads/reference", body, &result)
+func (s *Service) CreateReference(ctx context.Context, body *CreateReferenceRequest) (*UploadReference, error) {
+	result := new(UploadReference)
+	_, err := s.client.Post(ctx, "/api/uploads/reference", body, result)
 	return result, err
 }
 
@@ -135,10 +128,10 @@ func (s *Service) DeleteReference(ctx context.Context, referenceID int) error {
 }
 
 // UpdateReferenceUpload updates the upload bound to a reference.
-func (s *Service) UpdateReferenceUpload(ctx context.Context, referenceID int, uploadID int) (json.RawMessage, error) {
+func (s *Service) UpdateReferenceUpload(ctx context.Context, referenceID int, uploadID int) (*UploadReference, error) {
 	u := fmt.Sprintf("/api/uploads/references/%d", referenceID)
-	var result json.RawMessage
-	_, err := s.client.Put(ctx, u, map[string]int{"upload_id": uploadID}, &result)
+	result := new(UploadReference)
+	_, err := s.client.Put(ctx, u, &UpdateReferenceUploadRequest{UploadID: uploadID}, result)
 	return result, err
 }
 
@@ -152,7 +145,7 @@ func (s *Service) DeleteMarkedAttachment(ctx context.Context, attachmentID int) 
 // --- Share & Document ---
 
 // ShareToCourses shares uploads to courses.
-func (s *Service) ShareToCourses(ctx context.Context, body interface{}) error {
+func (s *Service) ShareToCourses(ctx context.Context, body *ShareToCoursesRequest) error {
 	_, err := s.client.Post(ctx, "/api/uploads/share-to-courses", body, nil)
 	return err
 }
@@ -166,13 +159,13 @@ func (s *Service) GetDocumentPreviewURL(ctx context.Context, uploadID int) (json
 }
 
 // ListUploadReferences returns reference details for an upload.
-func (s *Service) ListUploadReferences(ctx context.Context, uploadID int, opts *model.ListOptions, conditions string) (json.RawMessage, error) {
+func (s *Service) ListUploadReferences(ctx context.Context, uploadID int, opts *model.ListOptions, conditions string) (*UploadReferencesResponse, error) {
 	u := addListOptions(fmt.Sprintf("/api/uploads/%d/references", uploadID), opts)
 	if conditions != "" {
 		u = addQueryParams(u, map[string]string{"conditions": conditions})
 	}
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(UploadReferencesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -246,7 +239,7 @@ func (s *Service) GetUptoken(ctx context.Context, uploadID int) (json.RawMessage
 // --- Audio Upload ---
 
 // UploadAudio uploads an audio file.
-func (s *Service) UploadAudio(ctx context.Context, filePath string, params map[string]string) (*model.Upload, error) {
+func (s *Service) UploadAudio(ctx context.Context, filePath string, params map[string]string) (*Upload, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -288,21 +281,21 @@ func (s *Service) UploadAudio(ctx context.Context, filePath string, params map[s
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("Accept", "application/json")
 
-	result := new(model.Upload)
+	result := new(Upload)
 	_, err = s.client.Do(req, result)
 	return result, err
 }
 
 // ListMoodlePackages lists uploaded Moodle packages.
-func (s *Service) ListMoodlePackages(ctx context.Context, opts *model.ListOptions, conditions string) (json.RawMessage, error) {
+func (s *Service) ListMoodlePackages(ctx context.Context, opts *model.ListOptions, conditions string) (*MoodlePackagesResponse, error) {
 	params := map[string]string{}
 	if conditions != "" {
 		params["conditions"] = conditions
 	}
 	u := addListOptions("/api/uploads/moodle-pkg", opts)
 	u = addQueryParams(u, params)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(MoodlePackagesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 

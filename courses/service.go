@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 
+	"github.com/eWloYW8/zju-courses-go-sdk/activities"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/model"
 )
 
@@ -17,78 +18,6 @@ func New(client *sdk.Client) *Service {
 
 type Service struct {
 	client *sdk.Client
-}
-
-// --- List Responses ---
-
-type MyCoursesResponse struct {
-	Courses []*model.Course `json:"courses"`
-	model.Pagination
-}
-
-type ModulesResponse struct {
-	Modules []*model.Module `json:"modules"`
-}
-
-type EnrollmentsResponse struct {
-	Enrollments []*model.Enrollment `json:"enrollments"`
-}
-
-type ActivitiesResponse struct {
-	Activities []*model.Activity `json:"activities"`
-}
-
-type NavSettingResponse struct {
-	NavSetting          []*model.NavSetting `json:"nav_setting"`
-	CanNotDisabledItems []string            `json:"can_not_disabled_items"`
-}
-
-type OutlineResponse = model.Outline
-
-type HomeworkScoresResponse struct {
-	HomeworkActivities []*model.HomeworkActivity `json:"homework_activities"`
-	Scores             []*model.HomeworkScore    `json:"scores"`
-}
-
-type HomeworkSubmissionStatusResponse struct {
-	CourseID           int                               `json:"course_id"`
-	HomeworkActivities []*model.HomeworkSubmissionStatus `json:"homework_activities"`
-}
-
-type ExamsResponse struct {
-	Exams []*model.Exam `json:"exams"`
-}
-
-type ExamScoresResponse struct {
-	ExamScores []*model.ExamScore `json:"exam_scores"`
-}
-
-type ClassroomListResponse struct {
-	Classrooms []*model.Classroom `json:"classrooms"`
-}
-
-type TopicCategoriesResponse struct {
-	TopicCategories []*model.TopicCategory `json:"topic_categories"`
-}
-
-type UsersSmallAvatarsResponse struct {
-	Avatars map[string]string `json:"avatars"`
-}
-
-type InteractionsResponse struct {
-	Interactions []*model.Interaction `json:"interactions"`
-}
-
-type LiveRecordsResponse struct {
-	LiveRecords []*model.LiveRecord `json:"live_records"`
-}
-
-type RollcallsResponse struct {
-	Rollcalls []*model.Rollcall `json:"rollcalls"`
-}
-
-type SubmittedExamsResponse struct {
-	ExamIDs []int `json:"exam_ids"`
 }
 
 // --- Course Listing ---
@@ -111,9 +40,9 @@ func (s *Service) ListMyCoursesWithFilters(ctx context.Context, opts *model.List
 }
 
 // GetCourse returns detailed information about a specific course.
-func (s *Service) GetCourse(ctx context.Context, courseID int) (*model.Course, error) {
+func (s *Service) GetCourse(ctx context.Context, courseID int) (*Course, error) {
 	u := fmt.Sprintf("/api/courses/%d", courseID)
-	result := new(model.Course)
+	result := new(Course)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
@@ -157,9 +86,9 @@ func (s *Service) ListEnrollments(ctx context.Context, courseID int) (*Enrollmen
 }
 
 // GetEnrollmentUser returns enrollment details for a specific user.
-func (s *Service) GetEnrollmentUser(ctx context.Context, courseID, userID int) (*model.EnrollmentDetail, error) {
+func (s *Service) GetEnrollmentUser(ctx context.Context, courseID, userID int) (*EnrollmentDetail, error) {
 	u := fmt.Sprintf("/api/courses/%d/enrollments/users/%d", courseID, userID)
-	result := new(model.EnrollmentDetail)
+	result := new(EnrollmentDetail)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
@@ -191,9 +120,9 @@ func (s *Service) GetOutline(ctx context.Context, courseID int) (*OutlineRespons
 }
 
 // GetActivityPublishSetting returns the activity publish settings.
-func (s *Service) GetActivityPublishSetting(ctx context.Context, courseID int) (*model.ActivityPublishSetting, error) {
+func (s *Service) GetActivityPublishSetting(ctx context.Context, courseID int) (*ActivityPublishSetting, error) {
 	u := fmt.Sprintf("/api/course/%d/activity-publish-setting", courseID)
-	result := new(model.ActivityPublishSetting)
+	result := new(ActivityPublishSetting)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
@@ -295,21 +224,19 @@ func (s *Service) ListRollcalls(ctx context.Context, courseID int) (*RollcallsRe
 }
 
 // GetCompleteness returns the user's course completion status.
-func (s *Service) GetCompleteness(ctx context.Context, courseID int) (*model.CompletenessResponse, error) {
+func (s *Service) GetCompleteness(ctx context.Context, courseID int) (*CompletenessResponse, error) {
 	u := fmt.Sprintf("/api/course/%d/my-completeness", courseID)
-	result := new(model.CompletenessResponse)
+	result := new(CompletenessResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // GetActivityReadsForUser returns activity read statuses for the current user.
-func (s *Service) GetActivityReadsForUser(ctx context.Context, courseID int) ([]*model.ActivityRead, error) {
+func (s *Service) GetActivityReadsForUser(ctx context.Context, courseID int) ([]*activities.ActivityRead, error) {
 	u := fmt.Sprintf("/api/course/%d/activity-reads-for-user", courseID)
-	var wrapper struct {
-		ActivityReads []*model.ActivityRead `json:"activity_reads"`
-	}
-	_, err := s.client.Get(ctx, u, &wrapper)
-	return wrapper.ActivityReads, err
+	result := new(ActivityReadsForUserResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result.ActivityReads, err
 }
 
 // GetEntryRecord returns the course entry record.
@@ -331,16 +258,16 @@ func (s *Service) GetOnlineVideoCompletenessSetting(ctx context.Context, courseI
 // --- Course Management (Instructor) ---
 
 // CreateCourse creates a new course.
-func (s *Service) CreateCourse(ctx context.Context, course *model.Course) (*model.Course, error) {
-	result := new(model.Course)
+func (s *Service) CreateCourse(ctx context.Context, course *Course) (*Course, error) {
+	result := new(Course)
 	_, err := s.client.Post(ctx, "/api/courses", course, result)
 	return result, err
 }
 
 // UpdateCourse updates a course.
-func (s *Service) UpdateCourse(ctx context.Context, courseID int, course *model.Course) (*model.Course, error) {
+func (s *Service) UpdateCourse(ctx context.Context, courseID int, course *Course) (*Course, error) {
 	u := fmt.Sprintf("/api/courses/%d", courseID)
-	result := new(model.Course)
+	result := new(Course)
 	_, err := s.client.Put(ctx, u, course, result)
 	return result, err
 }
@@ -353,24 +280,24 @@ func (s *Service) DeleteCourse(ctx context.Context, courseID int) error {
 }
 
 // UpdateNavSetting updates navigation settings for a course.
-func (s *Service) UpdateNavSetting(ctx context.Context, courseID int, settings []*model.NavSetting) error {
+func (s *Service) UpdateNavSetting(ctx context.Context, courseID int, settings []*NavSetting) error {
 	u := fmt.Sprintf("/api/courses/%d/nav-setting", courseID)
-	_, err := s.client.Put(ctx, u, map[string][]*model.NavSetting{"nav_setting": settings}, nil)
+	_, err := s.client.Put(ctx, u, &UpdateNavSettingRequest{NavSetting: settings}, nil)
 	return err
 }
 
 // CreateModule creates a new module in a course.
-func (s *Service) CreateModule(ctx context.Context, courseID int, module *model.Module) (*model.Module, error) {
+func (s *Service) CreateModule(ctx context.Context, courseID int, module *Module) (*Module, error) {
 	u := fmt.Sprintf("/api/courses/%d/modules", courseID)
-	result := new(model.Module)
+	result := new(Module)
 	_, err := s.client.Post(ctx, u, module, result)
 	return result, err
 }
 
 // UpdateModule updates a module.
-func (s *Service) UpdateModule(ctx context.Context, moduleID int, module *model.Module) (*model.Module, error) {
+func (s *Service) UpdateModule(ctx context.Context, moduleID int, module *Module) (*Module, error) {
 	u := fmt.Sprintf("/api/module/%d", moduleID)
-	result := new(model.Module)
+	result := new(Module)
 	_, err := s.client.Put(ctx, u, module, result)
 	return result, err
 }
@@ -418,9 +345,9 @@ func (s *Service) GetSettings(ctx context.Context) (json.RawMessage, error) {
 }
 
 // GetBlueprintSubItemsCount returns blueprint sub-items count.
-func (s *Service) GetBlueprintSubItemsCount(ctx context.Context, courseID int) (*model.BlueprintSubItemsResponse, error) {
+func (s *Service) GetBlueprintSubItemsCount(ctx context.Context, courseID int) (*BlueprintSubItemsResponse, error) {
 	u := fmt.Sprintf("/api/blueprint/%d/sub-items-count", courseID)
-	result := new(model.BlueprintSubItemsResponse)
+	result := new(BlueprintSubItemsResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }

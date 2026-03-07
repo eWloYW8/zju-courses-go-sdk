@@ -35,11 +35,11 @@ type Upload struct {
 	ParentID                       int         `json:"parent_id,omitempty"`
 
 	// Media
-	Audio     *AudioInfo  `json:"audio,omitempty"`
-	Scorm     interface{} `json:"scorm,omitempty"`
-	Thumbnail *string     `json:"thumbnail,omitempty"`
-	Videos    []*Video    `json:"videos,omitempty"`
-	VideoURLs interface{} `json:"video_urls,omitempty"` // {"QVGA":"...","VGA":"...","HD":"..."}
+	Audio     *AudioInfo       `json:"audio,omitempty"`
+	Scorm     interface{}      `json:"scorm,omitempty"`
+	Thumbnail *UploadThumbnail `json:"thumbnail,omitempty"`
+	Videos    []*Video         `json:"videos,omitempty"`
+	VideoURLs interface{}      `json:"video_urls,omitempty"` // {"QVGA":"...","VGA":"...","HD":"..."}
 
 	// Permissions
 	CaptionPermission          interface{} `json:"caption_permission,omitempty"`
@@ -47,6 +47,10 @@ type Upload struct {
 	CaptionTranslatePermission interface{} `json:"caption_translate_permission,omitempty"`
 	ChapterPermission          interface{} `json:"chapter_permission,omitempty"`
 	TopicPermission            interface{} `json:"topic_permission,omitempty"`
+}
+
+type UploadThumbnail struct {
+	ID int `json:"id,omitempty"`
 }
 
 // AudioInfo represents audio metadata.

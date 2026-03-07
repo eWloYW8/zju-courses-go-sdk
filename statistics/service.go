@@ -21,10 +21,10 @@ type Service struct {
 
 // GetUserVisits returns user visit statistics.
 // jwt parameter is required for statistics API.
-func (s *Service) GetUserVisits(ctx context.Context, jwt string, params map[string]string) (json.RawMessage, error) {
+func (s *Service) GetUserVisits(ctx context.Context, jwt string, params StatisticsQueryParams) (UserVisitsResponse, error) {
 	u := fmt.Sprintf("/statistics/api/user-visits?jwt=%s", jwt)
 	u = addQueryParams(u, params)
-	var result json.RawMessage
+	var result UserVisitsResponse
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
@@ -32,10 +32,10 @@ func (s *Service) GetUserVisits(ctx context.Context, jwt string, params map[stri
 // --- Learning Activity ---
 
 // GetLearningActivity returns learning activity statistics.
-func (s *Service) GetLearningActivity(ctx context.Context, jwt string, params map[string]string) (json.RawMessage, error) {
+func (s *Service) GetLearningActivity(ctx context.Context, jwt string, params StatisticsQueryParams) (LearningActivityResponse, error) {
 	u := fmt.Sprintf("/statistics/api/learning-activity?jwt=%s", jwt)
 	u = addQueryParams(u, params)
-	var result json.RawMessage
+	var result LearningActivityResponse
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
@@ -43,7 +43,7 @@ func (s *Service) GetLearningActivity(ctx context.Context, jwt string, params ma
 // --- User Actions ---
 
 // PostUserActions reports user actions.
-func (s *Service) PostUserActions(ctx context.Context, jwt string, body interface{}) error {
+func (s *Service) PostUserActions(ctx context.Context, jwt string, body UserActionRequest) error {
 	u := fmt.Sprintf("/api/user-actions?jwt=%s", jwt)
 	_, err := s.client.Post(ctx, u, body, nil)
 	return err
@@ -197,7 +197,7 @@ func (s *Service) GetStatistic(ctx context.Context) (json.RawMessage, error) {
 // --- Footprint ---
 
 // RecordFootprint records a user footprint.
-func (s *Service) RecordFootprint(ctx context.Context, body interface{}) error {
+func (s *Service) RecordFootprint(ctx context.Context, body FootprintRequest) error {
 	_, err := s.client.Post(ctx, "/api/footprint/tread", body, nil)
 	return err
 }
@@ -205,9 +205,9 @@ func (s *Service) RecordFootprint(ctx context.Context, body interface{}) error {
 // --- User Completeness ---
 
 // GetUserCompleteness returns user completeness.
-func (s *Service) GetUserCompleteness(ctx context.Context, params map[string]string) (json.RawMessage, error) {
+func (s *Service) GetUserCompleteness(ctx context.Context, params UserCompletenessQueryParams) (UserCompletenessResponse, error) {
 	u := addQueryParams("/api/user-completeness", params)
-	var result json.RawMessage
+	var result UserCompletenessResponse
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }

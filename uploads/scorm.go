@@ -46,11 +46,6 @@ func (s *Service) BuildSCORMPreviewURL(uploadID int, sco string, parameters stri
 	return u
 }
 
-// UploadURLResponse represents the response from GetUploadURL.
-type UploadURLResponse struct {
-	URL string `json:"url"`
-}
-
 // GetUploadURL returns the file access URL.
 func (s *Service) GetUploadURL(ctx context.Context, uploadID int) (*UploadURLResponse, error) {
 	u := fmt.Sprintf("/api/uploads/%d/url", uploadID)

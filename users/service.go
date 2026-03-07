@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/model"
 )
 
@@ -19,72 +19,48 @@ type Service struct {
 	client *sdk.Client
 }
 
-// --- Response Types ---
-
-type AcademicYearsResponse struct {
-	AcademicYears []*model.AcademicYear `json:"academic_years"`
-}
-
-type SemestersResponse struct {
-	Semesters []*model.Semester `json:"semesters"`
-}
-
-type DepartmentsResponse struct {
-	Departments []*model.Department `json:"departments"`
-}
-
-type ClassesResponse struct {
-	Classes []interface{} `json:"classes"`
-}
-
-type GradesResponse struct {
-	Grades []*model.Grade `json:"grades"`
-}
-
-type UserResourcesResponse struct {
-	Uploads []*model.Upload `json:"uploads"`
-	model.Pagination
-}
-
-type RecentlyVisitedCoursesResponse struct {
-	Courses []*model.Course `json:"courses,omitempty"`
-}
-
 // --- User Profile ---
 
 // GetProfile returns the current user's profile.
-func (s *Service) GetProfile(ctx context.Context) (*model.UserProfile, error) {
-	result := new(model.UserProfile)
+func (s *Service) GetProfile(ctx context.Context) (*UserProfile, error) {
+	result := new(UserProfile)
 	_, err := s.client.Get(ctx, "/api/user", result)
 	return result, err
 }
 
 // UpdateProfile updates the current user's profile.
-func (s *Service) UpdateProfile(ctx context.Context, body interface{}) (*model.UserProfile, error) {
-	result := new(model.UserProfile)
+func (s *Service) UpdateProfile(ctx context.Context, body UpdateProfileRequest) (*UserProfile, error) {
+	result := new(UserProfile)
 	_, err := s.client.Put(ctx, "/api/user", body, result)
 	return result, err
 }
 
 // SearchUser searches for users.
-func (s *Service) SearchUser(ctx context.Context, params map[string]string) ([]interface{}, error) {
-	u := addQueryParams("/api/user/search", params)
-	var result []interface{}
-	_, err := s.client.Get(ctx, u, &result)
+func (s *Service) SearchUser(ctx context.Context, params SearchUserParams) ([]*UserSearchResult, error) {
+	query := map[string]string{}
+	if params.Keywords != "" {
+		query["keywords"] = params.Keywords
+	}
+	if params.ExcludeStudentRole {
+		query["exclude_student_role"] = "true"
+	}
+	if params.OrgID != nil {
+		query["org_id"] = fmt.Sprintf("%d", *params.OrgID)
+	}
+	if params.DepartmentID != nil {
+		query["department_id"] = fmt.Sprintf("%d", *params.DepartmentID)
+	}
+	var result []*UserSearchResult
+	_, err := s.client.Get(ctx, addQueryParams("/api/user/search", query), &result)
 	return result, err
 }
 
 // GetUserByID returns a user by their ID.
-func (s *Service) GetUserByID(ctx context.Context, userID int) (*model.UserProfile, error) {
+func (s *Service) GetUserByID(ctx context.Context, userID int) (*UserProfile, error) {
 	u := fmt.Sprintf("/api/users/%d", userID)
-	result := new(model.UserProfile)
+	result := new(UserProfile)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
-}
-
-type StorageUsedResponse struct {
-	StorageUsed     int64 `json:"storage_used"`
-	StorageAssigned int64 `json:"storage_assigned"`
 }
 
 // --- User Resources ---
@@ -192,21 +168,21 @@ func (s *Service) SetLanguage(ctx context.Context, lang string) error {
 }
 
 // GetLinks returns user's custom links.
-func (s *Service) GetLinks(ctx context.Context) ([]interface{}, error) {
-	var result []interface{}
+func (s *Service) GetLinks(ctx context.Context) ([]*UserLink, error) {
+	var result []*UserLink
 	_, err := s.client.Get(ctx, "/api/user/links", &result)
 	return result, err
 }
 
 // CreateLink creates a custom link.
-func (s *Service) CreateLink(ctx context.Context, body interface{}) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Post(ctx, "/api/user/links", body, &result)
+func (s *Service) CreateLink(ctx context.Context, body UserLinkRequest) (*UserLink, error) {
+	result := new(UserLink)
+	_, err := s.client.Post(ctx, "/api/user/links", body, result)
 	return result, err
 }
 
 // UpdateLink updates a custom link.
-func (s *Service) UpdateLink(ctx context.Context, linkID int, body interface{}) error {
+func (s *Service) UpdateLink(ctx context.Context, linkID int, body UserLinkRequest) error {
 	u := fmt.Sprintf("/api/user/links/%d", linkID)
 	_, err := s.client.Put(ctx, u, body, nil)
 	return err
@@ -222,87 +198,106 @@ func (s *Service) DeleteLink(ctx context.Context, linkID int) error {
 // --- User Course Operations ---
 
 // CheckCourseGraduate checks if a course is graduated.
-func (s *Service) CheckCourseGraduate(ctx context.Context, courseID int) (json.RawMessage, error) {
+func (s *Service) CheckCourseGraduate(ctx context.Context, courseID int) (CourseGraduateCheckResponse, error) {
 	u := fmt.Sprintf("/api/user/check-course-graduate?course_id=%d", courseID)
-	var result json.RawMessage
+	var result CourseGraduateCheckResponse
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
 // CheckCoursesGraduate checks graduation status for multiple courses and a user context.
-func (s *Service) CheckCoursesGraduate(ctx context.Context, body interface{}) (json.RawMessage, error) {
-	var result json.RawMessage
+func (s *Service) CheckCoursesGraduate(ctx context.Context, body CheckCoursesGraduateRequest) (CourseGraduateCheckResponse, error) {
+	var result CourseGraduateCheckResponse
 	_, err := s.client.Post(ctx, "/api/user/check-course-graduate", body, &result)
 	return result, err
 }
 
 // CheckExpiredPassword checks if the user's password is expired.
-func (s *Service) CheckExpiredPassword(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/user/check-expired-password", &result)
+func (s *Service) CheckExpiredPassword(ctx context.Context) (*ExpiredPasswordResponse, error) {
+	result := new(ExpiredPasswordResponse)
+	_, err := s.client.Get(ctx, "/api/user/check-expired-password", result)
 	return result, err
 }
 
 // GetFirstTimeLogin returns if this is the user's first login.
-func (s *Service) GetFirstTimeLogin(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
+func (s *Service) GetFirstTimeLogin(ctx context.Context) (FirstTimeLoginResponse, error) {
+	var result FirstTimeLoginResponse
 	_, err := s.client.Get(ctx, "/api/user/first-time-login", &result)
 	return result, err
 }
 
 // UpdateFirstTimeLogin updates first-time-login state.
-func (s *Service) UpdateFirstTimeLogin(ctx context.Context, body interface{}) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Put(ctx, "/api/user/first-time-login", body, &result)
-	return result, err
+func (s *Service) UpdateFirstTimeLogin(ctx context.Context) error {
+	_, err := s.client.Put(ctx, "/api/user/first-time-login", nil, nil)
+	return err
 }
 
 // GetPreTask returns the user's pre-task information.
-func (s *Service) GetPreTask(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/user/pre-task", &result)
+func (s *Service) GetPreTask(ctx context.Context) (*PreTaskResponse, error) {
+	result := new(PreTaskResponse)
+	_, err := s.client.Get(ctx, "/api/user/pre-task", result)
 	return result, err
 }
 
 // GetPersonas returns the user's personas.
-func (s *Service) GetPersonas(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/user/personas", &result)
+func (s *Service) GetPersonas(ctx context.Context) (*PersonasResponse, error) {
+	result := new(PersonasResponse)
+	_, err := s.client.Get(ctx, "/api/user/personas", result)
 	return result, err
 }
 
+// CreatePersonas submits the user's personas information.
+func (s *Service) CreatePersonas(ctx context.Context, body PersonasRequest) error {
+	_, err := s.client.Post(ctx, "/api/user/personas", body, nil)
+	return err
+}
+
 // GetDepartment returns the user's department.
-func (s *Service) GetDepartment(ctx context.Context) (*model.Department, error) {
-	result := new(model.Department)
+func (s *Service) GetDepartment(ctx context.Context) (*Department, error) {
+	result := new(Department)
 	_, err := s.client.Get(ctx, "/api/user/department", result)
 	return result, err
 }
 
 // UpdateDepartment updates the user's department.
-func (s *Service) UpdateDepartment(ctx context.Context, body interface{}) (*model.Department, error) {
-	result := new(model.Department)
+func (s *Service) UpdateDepartment(ctx context.Context, body DepartmentUpdateRequest) (*Department, error) {
+	result := new(Department)
 	_, err := s.client.Put(ctx, "/api/user/department", body, result)
 	return result, err
 }
 
 // GetAssociationCode returns the user's association code.
-func (s *Service) GetAssociationCode(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/user/association-code", &result)
+func (s *Service) GetAssociationCode(ctx context.Context) (*AssociationCodeResponse, error) {
+	result := new(AssociationCodeResponse)
+	_, err := s.client.Get(ctx, "/api/user/association-code", result)
 	return result, err
 }
 
-// GetChat returns the user's chat information.
-func (s *Service) GetChat(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
+// ResetAssociationCode resets the user's association code.
+func (s *Service) ResetAssociationCode(ctx context.Context) (*AssociationCodeResponse, error) {
+	result := new(AssociationCodeResponse)
+	_, err := s.client.Put(ctx, "/api/user/association-code", nil, result)
+	return result, err
+}
+
+// GetChat returns the user's chat history.
+func (s *Service) GetChat(ctx context.Context) ([]*ChatMessage, error) {
+	var result []*ChatMessage
 	_, err := s.client.Get(ctx, "/api/user/chat", &result)
 	return result, err
 }
 
+// SendChatMessage sends a chat message.
+func (s *Service) SendChatMessage(ctx context.Context, body UserChatRequest) (*ChatMessage, error) {
+	result := new(ChatMessage)
+	_, err := s.client.Post(ctx, "/api/user/chat", body, result)
+	return result, err
+}
+
 // GetFailedCourses returns the user's failed courses.
-func (s *Service) GetFailedCourses(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/user/failed-courses", &result)
+func (s *Service) GetFailedCourses(ctx context.Context) (*FailedCoursesResponse, error) {
+	result := new(FailedCoursesResponse)
+	_, err := s.client.Get(ctx, "/api/user/failed-courses", result)
 	return result, err
 }
 
@@ -313,49 +308,89 @@ func (s *Service) GetCourseCertificationScores(ctx context.Context) (json.RawMes
 	return result, err
 }
 
+// RecalculateCourseCertificationScores recalculates course certification scores.
+func (s *Service) RecalculateCourseCertificationScores(ctx context.Context, body RecalculateCourseCertificationScoresRequest) error {
+	_, err := s.client.Put(ctx, "/api/user/course-certification/scores", body, nil)
+	return err
+}
+
 // GetAcademicLearningResources returns academic learning resources.
-func (s *Service) GetAcademicLearningResources(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/user/academic-learning-resources", &result)
+func (s *Service) GetAcademicLearningResources(ctx context.Context, params AcademicLearningResourcesParams) (*AcademicLearningResourcesResponse, error) {
+	query := map[string]string{}
+	if params.Page > 0 {
+		query["page"] = fmt.Sprintf("%d", params.Page)
+	}
+	if params.PageSize > 0 {
+		query["page_size"] = fmt.Sprintf("%d", params.PageSize)
+	}
+	if params.CourseCode != "" {
+		query["course_code"] = params.CourseCode
+	}
+	if params.Keyword != "" {
+		query["keyword"] = params.Keyword
+	}
+	for i, typ := range params.Types {
+		query[fmt.Sprintf("types[%d]", i)] = typ
+	}
+	result := new(AcademicLearningResourcesResponse)
+	_, err := s.client.Get(ctx, addQueryParams("/api/user/academic-learning-resources", query), result)
 	return result, err
 }
 
 // GetThirdPartResources returns third-party resources.
-func (s *Service) GetThirdPartResources(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/user/third-part-resources", &result)
+func (s *Service) GetThirdPartResources(ctx context.Context, params ThirdPartResourcesParams) (*ThirdPartResourcesResponse, error) {
+	query := map[string]string{}
+	if params.Page > 0 {
+		query["page"] = fmt.Sprintf("%d", params.Page)
+	}
+	if params.PageSize > 0 {
+		query["page_size"] = fmt.Sprintf("%d", params.PageSize)
+	}
+	if params.Conditions != "" {
+		query["conditions"] = params.Conditions
+	}
+	result := new(ThirdPartResourcesResponse)
+	_, err := s.client.Get(ctx, addQueryParams("/api/user/third-part-resources", query), result)
 	return result, err
 }
 
 // GetOtherVideoResources returns other video resources.
-func (s *Service) GetOtherVideoResources(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/user/other-video-resources", &result)
+func (s *Service) GetOtherVideoResources(ctx context.Context, params OtherVideoResourcesParams) (*OtherVideoResourcesResponse, error) {
+	query := map[string]string{}
+	if params.Page > 0 {
+		query["page"] = fmt.Sprintf("%d", params.Page)
+	}
+	if params.PageSize > 0 {
+		query["page_size"] = fmt.Sprintf("%d", params.PageSize)
+	}
+	result := new(OtherVideoResourcesResponse)
+	_, err := s.client.Get(ctx, addQueryParams("/api/user/other-video-resources", query), result)
 	return result, err
 }
 
 // --- Notes ---
 
 // ListNotes returns the user's notes.
-func (s *Service) ListNotes(ctx context.Context, params map[string]string) (json.RawMessage, error) {
+func (s *Service) ListNotes(ctx context.Context, params map[string]string) (NotesResponse, error) {
 	u := addQueryParams("/api/notes", params)
-	var result json.RawMessage
+	var result NotesResponse
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
 // CreateNote creates a note.
-func (s *Service) CreateNote(ctx context.Context, body interface{}) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Post(ctx, "/api/notes", body, &result)
+func (s *Service) CreateNote(ctx context.Context, body NoteRequest) (*Note, error) {
+	result := new(Note)
+	_, err := s.client.Post(ctx, "/api/notes", body, result)
 	return result, err
 }
 
 // UpdateNote updates a note.
-func (s *Service) UpdateNote(ctx context.Context, noteID int, body interface{}) error {
+func (s *Service) UpdateNote(ctx context.Context, noteID int, body NoteRequest) (*Note, error) {
 	u := fmt.Sprintf("/api/notes/%d", noteID)
-	_, err := s.client.Put(ctx, u, body, nil)
-	return err
+	result := new(Note)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
 }
 
 // DeleteNote deletes a note.
@@ -378,46 +413,46 @@ func (s *Service) GetNotebook(ctx context.Context, notebookID int) (json.RawMess
 // --- Sign In ---
 
 // SignIn performs a sign-in to the platform.
-func (s *Service) SignIn(ctx context.Context, body interface{}) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Post(ctx, "/api/sign-in", body, &result)
+func (s *Service) SignIn(ctx context.Context) (*SignIn, error) {
+	result := new(SignIn)
+	_, err := s.client.Post(ctx, "/api/sign-in", nil, result)
 	return result, err
 }
 
 // GetSignInStats returns sign-in statistics.
-func (s *Service) GetSignInStats(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/sign-in/stats", &result)
+func (s *Service) GetSignInStats(ctx context.Context) (*SignInStatsResponse, error) {
+	result := new(SignInStatsResponse)
+	_, err := s.client.Get(ctx, "/api/sign-in/stats", result)
 	return result, err
 }
 
 // --- Email Verification ---
 
 // SendVerificationEmail sends a verification email.
-func (s *Service) SendVerificationEmail(ctx context.Context, body interface{}) error {
-	_, err := s.client.Post(ctx, "/api/user/send_verification_email", body, nil)
+func (s *Service) SendVerificationEmail(ctx context.Context) error {
+	_, err := s.client.Post(ctx, "/api/user/send_verification_email", struct{}{}, nil)
 	return err
 }
 
 // SendOrgSignUpVerificationEmail sends an org sign-up verification email.
-func (s *Service) SendOrgSignUpVerificationEmail(ctx context.Context, body interface{}) error {
-	_, err := s.client.Post(ctx, "/api/user/send_org_sing_up_verification_email", body, nil)
+func (s *Service) SendOrgSignUpVerificationEmail(ctx context.Context) error {
+	_, err := s.client.Post(ctx, "/api/user/send_org_sing_up_verification_email", struct{}{}, nil)
 	return err
 }
 
 // --- Captures ---
 
 // ListMyCaptures returns the user's captures.
-func (s *Service) ListMyCaptures(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/my-captures", &result)
+func (s *Service) ListMyCaptures(ctx context.Context) (*MyCapturesResponse, error) {
+	result := new(MyCapturesResponse)
+	_, err := s.client.Get(ctx, "/api/my-captures", result)
 	return result, err
 }
 
 // ListPublicCaptures returns public captures.
-func (s *Service) ListPublicCaptures(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/public-captures", &result)
+func (s *Service) ListPublicCaptures(ctx context.Context) (*PublicCapturesResponse, error) {
+	result := new(PublicCapturesResponse)
+	_, err := s.client.Get(ctx, "/api/public-captures", result)
 	return result, err
 }
 
@@ -432,23 +467,23 @@ func (s *Service) GetCapture(ctx context.Context, captureID int) (json.RawMessag
 // --- User Index Stats ---
 
 // GetCoursesInfoStatus returns course info status for the user index.
-func (s *Service) GetCoursesInfoStatus(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/user-index-stat/courses/info-status", &result)
+func (s *Service) GetCoursesInfoStatus(ctx context.Context) (*CoursesInfoStatusResponse, error) {
+	result := new(CoursesInfoStatusResponse)
+	_, err := s.client.Get(ctx, "/api/user-index-stat/courses/info-status", result)
 	return result, err
 }
 
 // GetOrgSummary returns the organization summary for the user index.
-func (s *Service) GetOrgSummary(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
+func (s *Service) GetOrgSummary(ctx context.Context) (OrgSummaryResponse, error) {
+	var result OrgSummaryResponse
 	_, err := s.client.Get(ctx, "/api/user-index-stat/org-summary", &result)
 	return result, err
 }
 
 // GetCoursesIdentities returns course identities.
-func (s *Service) GetCoursesIdentities(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/courses-identities?no-intercept=true", &result)
+func (s *Service) GetCoursesIdentities(ctx context.Context) (*CoursesIdentitiesResponse, error) {
+	result := new(CoursesIdentitiesResponse)
+	_, err := s.client.Get(ctx, "/api/courses-identities?no-intercept=true", result)
 	return result, err
 }
 

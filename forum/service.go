@@ -2,10 +2,9 @@ package forum
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/model"
 )
 
@@ -19,19 +18,12 @@ type Service struct {
 	client *sdk.Client
 }
 
-// --- Response Types ---
-
-type TopicsResponse struct {
-	Topics []*model.Topic `json:"topics"`
-	model.Pagination
-}
-
 // --- Forum Categories ---
 
 // GetCategory returns a forum category with its topics.
-func (s *Service) GetCategory(ctx context.Context, categoryID int, opts *model.ListOptions) (*model.ForumCategoryResponse, error) {
+func (s *Service) GetCategory(ctx context.Context, categoryID int, opts *model.ListOptions) (*ForumCategoryResponse, error) {
 	u := addListOptions(fmt.Sprintf("/api/forum/categories/%d", categoryID), opts)
-	result := new(model.ForumCategoryResponse)
+	result := new(ForumCategoryResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
@@ -39,24 +31,24 @@ func (s *Service) GetCategory(ctx context.Context, categoryID int, opts *model.L
 // --- Topics ---
 
 // GetTopic returns a specific topic.
-func (s *Service) GetTopic(ctx context.Context, topicID int) (*model.Topic, error) {
+func (s *Service) GetTopic(ctx context.Context, topicID int) (*Topic, error) {
 	u := fmt.Sprintf("/api/forum/topics/%d", topicID)
-	result := new(model.Topic)
+	result := new(Topic)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // CreateTopic creates a new topic in a category.
-func (s *Service) CreateTopic(ctx context.Context, body interface{}) (*model.Topic, error) {
-	result := new(model.Topic)
+func (s *Service) CreateTopic(ctx context.Context, body *CreateTopicRequest) (*Topic, error) {
+	result := new(Topic)
 	_, err := s.client.Post(ctx, "/api/topics", body, result)
 	return result, err
 }
 
 // UpdateTopic updates an existing topic.
-func (s *Service) UpdateTopic(ctx context.Context, topicID int, body interface{}) (*model.Topic, error) {
+func (s *Service) UpdateTopic(ctx context.Context, topicID int, body *UpdateTopicRequest) (*Topic, error) {
 	u := fmt.Sprintf("/api/topics/%d", topicID)
-	result := new(model.Topic)
+	result := new(Topic)
 	_, err := s.client.Put(ctx, u, body, result)
 	return result, err
 }
@@ -83,7 +75,7 @@ func (s *Service) UnlikeTopic(ctx context.Context, topicID int) error {
 }
 
 // TopTopic marks a topic as topped.
-func (s *Service) TopTopic(ctx context.Context, topicID int, body interface{}) error {
+func (s *Service) TopTopic(ctx context.Context, topicID int, body TopTopicRequest) error {
 	u := fmt.Sprintf("/api/topics/%d/topped", topicID)
 	_, err := s.client.Post(ctx, u, body, nil)
 	return err
@@ -97,21 +89,14 @@ func (s *Service) CancelTopTopic(ctx context.Context, topicID int, params map[st
 }
 
 // ListLatestTopics returns the latest topics.
-func (s *Service) ListLatestTopics(ctx context.Context, count int) ([]*model.Topic, error) {
+func (s *Service) ListLatestTopics(ctx context.Context, count int) ([]*Topic, error) {
 	u := fmt.Sprintf("/api/topics/latest?no-intercept=true&count=%d", count)
-	var wrapper struct {
-		Topics []*model.Topic `json:"topics"`
-	}
-	_, err := s.client.Get(ctx, u, &wrapper)
-	return wrapper.Topics, err
+	result := new(LatestTopicsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result.Topics, err
 }
 
 // --- Forum Score ---
-
-// ForumScoreResponse wraps the forum score API response.
-type ForumScoreResponse struct {
-	ForumScore *model.ForumScore `json:"forum_score"`
-}
 
 // GetForumScore returns the forum score for a student.
 func (s *Service) GetForumScore(ctx context.Context, activityID, studentID int) (*ForumScoreResponse, error) {
@@ -122,32 +107,32 @@ func (s *Service) GetForumScore(ctx context.Context, activityID, studentID int) 
 }
 
 // GetForumScores returns all forum scores for an activity.
-func (s *Service) GetForumScores(ctx context.Context, activityID int) (json.RawMessage, error) {
+func (s *Service) GetForumScores(ctx context.Context, activityID int) (ForumScoresResponse, error) {
 	u := fmt.Sprintf("/api/activities/%d/forum-scores", activityID)
-	var result json.RawMessage
+	result := make(ForumScoresResponse)
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
 // GetCourseForumScores returns forum scores for a course.
-func (s *Service) GetCourseForumScores(ctx context.Context, courseID int) (json.RawMessage, error) {
+func (s *Service) GetCourseForumScores(ctx context.Context, courseID int) (CourseForumScoresResponse, error) {
 	u := fmt.Sprintf("/api/course/%d/forum-scores", courseID)
-	var result json.RawMessage
+	result := make(CourseForumScoresResponse)
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
 // SaveForumScore updates a student's forum score.
-func (s *Service) SaveForumScore(ctx context.Context, activityID int, studentID int, score interface{}) error {
+func (s *Service) SaveForumScore(ctx context.Context, activityID int, studentID int, score *float64) error {
 	u := fmt.Sprintf("/api/activities/%d/forum-scores", activityID)
-	_, err := s.client.Put(ctx, u, map[string]interface{}{"student_id": studentID, "score": score}, nil)
+	_, err := s.client.Put(ctx, u, &SaveForumScoreRequest{StudentID: studentID, Score: score}, nil)
 	return err
 }
 
 // IsCategoryReplied reports whether the category has replies for the current context.
-func (s *Service) IsCategoryReplied(ctx context.Context, categoryID int) (json.RawMessage, error) {
+func (s *Service) IsCategoryReplied(ctx context.Context, categoryID int) (CategoryRepliedResponse, error) {
 	u := fmt.Sprintf("/api/forum/categories/%d/is-replied", categoryID)
-	var result json.RawMessage
+	result := make(CategoryRepliedResponse)
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
@@ -155,17 +140,17 @@ func (s *Service) IsCategoryReplied(ctx context.Context, categoryID int) (json.R
 // --- Replies ---
 
 // CreateReply creates a reply to a topic.
-func (s *Service) CreateReply(ctx context.Context, topicID int, body interface{}) (*model.Reply, error) {
+func (s *Service) CreateReply(ctx context.Context, topicID int, body *CreateReplyRequest) (*Reply, error) {
 	u := fmt.Sprintf("/api/replies/%d", topicID)
-	result := new(model.Reply)
+	result := new(Reply)
 	_, err := s.client.Post(ctx, u, body, result)
 	return result, err
 }
 
 // UpdateReply updates a reply.
-func (s *Service) UpdateReply(ctx context.Context, replyID int, body interface{}) (*model.Reply, error) {
+func (s *Service) UpdateReply(ctx context.Context, replyID int, body *UpdateReplyRequest) (*Reply, error) {
 	u := fmt.Sprintf("/api/replies/%d", replyID)
-	result := new(model.Reply)
+	result := new(Reply)
 	_, err := s.client.Put(ctx, u, body, result)
 	return result, err
 }

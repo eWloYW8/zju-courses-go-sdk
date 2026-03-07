@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/model"
 )
 
@@ -19,47 +19,28 @@ type Service struct {
 	client *sdk.Client
 }
 
-// --- Response Types ---
-
-type UploadReferencesResponse struct {
-	References []*model.UploadReference `json:"references"`
-}
-
-type CommentsResponse struct {
-	Comments []*model.Comment `json:"comments"`
-	model.Pagination
-}
-
-type CommentPageCountResponse struct {
-	PageStats []interface{} `json:"page_stats"`
-}
-
-type RecommendSubmissionsResponse struct {
-	Submissions []*model.Submission `json:"submissions"`
-}
-
 // --- Activity CRUD ---
 
 // GetActivity returns detailed information about an activity.
-func (s *Service) GetActivity(ctx context.Context, activityID int) (*model.Activity, error) {
+func (s *Service) GetActivity(ctx context.Context, activityID int) (*Activity, error) {
 	u := fmt.Sprintf("/api/activities/%d", activityID)
-	result := new(model.Activity)
+	result := new(Activity)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // CreateActivity creates a new activity in a course.
-func (s *Service) CreateActivity(ctx context.Context, courseID int, activity interface{}) (*model.Activity, error) {
+func (s *Service) CreateActivity(ctx context.Context, courseID int, activity interface{}) (*Activity, error) {
 	u := fmt.Sprintf("/api/course/activities/%d", courseID)
-	result := new(model.Activity)
+	result := new(Activity)
 	_, err := s.client.Post(ctx, u, activity, result)
 	return result, err
 }
 
 // UpdateActivity updates an existing activity.
-func (s *Service) UpdateActivity(ctx context.Context, activityID int, activity interface{}) (*model.Activity, error) {
+func (s *Service) UpdateActivity(ctx context.Context, activityID int, activity interface{}) (*Activity, error) {
 	u := fmt.Sprintf("/api/activities/%d", activityID)
-	result := new(model.Activity)
+	result := new(Activity)
 	_, err := s.client.Put(ctx, u, activity, result)
 	return result, err
 }
@@ -89,17 +70,17 @@ func (s *Service) HaveDependents(ctx context.Context, activityIDs []int) (json.R
 // --- Activity Read Status ---
 
 // GetActivityRead returns the read status for an activity.
-func (s *Service) GetActivityRead(ctx context.Context, activityID int) (*model.ActivityRead, error) {
+func (s *Service) GetActivityRead(ctx context.Context, activityID int) (*ActivityRead, error) {
 	u := fmt.Sprintf("/api/course/activities-read/%d", activityID)
-	result := new(model.ActivityRead)
+	result := new(ActivityRead)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // MarkActivityRead marks an activity as read.
-func (s *Service) MarkActivityRead(ctx context.Context, activityID int) (*model.ActivityRead, error) {
+func (s *Service) MarkActivityRead(ctx context.Context, activityID int) (*ActivityRead, error) {
 	u := fmt.Sprintf("/api/course/activity-read/%d", activityID)
-	result := new(model.ActivityRead)
+	result := new(ActivityRead)
 	_, err := s.client.Post(ctx, u, nil, result)
 	return result, err
 }
@@ -116,9 +97,9 @@ func (s *Service) LogExamActivityRead(ctx context.Context, activityID int, body 
 
 // CheckIsLocked checks if activities are locked.
 // activityConditions format: "activityID1,activityID2,..."
-func (s *Service) CheckIsLocked(ctx context.Context, activityConditions string) (map[string]*model.IsLockedStatus, error) {
+func (s *Service) CheckIsLocked(ctx context.Context, activityConditions string) (map[string]*IsLockedStatus, error) {
 	u := fmt.Sprintf("/api/activities/is-locked?activity_conditions=%s", activityConditions)
-	result := make(map[string]*model.IsLockedStatus)
+	result := make(map[string]*IsLockedStatus)
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
@@ -134,24 +115,24 @@ func (s *Service) ListComments(ctx context.Context, activityID int, opts *model.
 }
 
 // CreateComment creates a comment on an activity.
-func (s *Service) CreateComment(ctx context.Context, activityID int, comment interface{}) (*model.Comment, error) {
+func (s *Service) CreateComment(ctx context.Context, activityID int, comment *CreateCommentRequest) (*Comment, error) {
 	u := fmt.Sprintf("/api/activities/%d/comments", activityID)
-	result := new(model.Comment)
+	result := new(Comment)
 	_, err := s.client.Post(ctx, u, comment, result)
 	return result, err
 }
 
 // OperateComment performs an operation (like/unlike) on a comment.
-func (s *Service) OperateComment(ctx context.Context, activityID int, body interface{}) error {
+func (s *Service) OperateComment(ctx context.Context, activityID int, body *OperateCommentRequest) error {
 	u := fmt.Sprintf("/api/activities/%d/comments/operate", activityID)
 	_, err := s.client.Post(ctx, u, body, nil)
 	return err
 }
 
 // GetCommentCount returns comment counts for an activity.
-func (s *Service) GetCommentCount(ctx context.Context, activityID int) (*model.CommentCount, error) {
+func (s *Service) GetCommentCount(ctx context.Context, activityID int) (*CommentCount, error) {
 	u := fmt.Sprintf("/api/activities/%d/comment/count", activityID)
-	result := new(model.CommentCount)
+	result := new(CommentCount)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
