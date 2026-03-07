@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/activities"
 	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
@@ -39,9 +40,24 @@ func (s *Service) ListMyCoursesWithFilters(ctx context.Context, opts *model.List
 	return result, err
 }
 
+// ListMyCoursesByConditions returns the current user's courses using the POST-based query used by the web app.
+func (s *Service) ListMyCoursesByConditions(ctx context.Context, body *ListMyCoursesRequest) (json.RawMessage, error) {
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, "/api/my-courses", body, &result)
+	return result, err
+}
+
 // GetCourse returns detailed information about a specific course.
 func (s *Service) GetCourse(ctx context.Context, courseID int) (*Course, error) {
+	return s.GetCourseWithFields(ctx, courseID, "")
+}
+
+// GetCourseWithFields returns detailed information about a specific course with an optional field list.
+func (s *Service) GetCourseWithFields(ctx context.Context, courseID int, fields string) (*Course, error) {
 	u := fmt.Sprintf("/api/courses/%d", courseID)
+	if fields != "" {
+		u += "?fields=" + url.QueryEscape(fields)
+	}
 	result := new(Course)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
@@ -260,7 +276,7 @@ func (s *Service) GetOnlineVideoCompletenessSetting(ctx context.Context, courseI
 // CreateCourse creates a new course.
 func (s *Service) CreateCourse(ctx context.Context, course *Course) (*Course, error) {
 	result := new(Course)
-	_, err := s.client.Post(ctx, "/api/courses", course, result)
+	_, err := s.client.Post(ctx, "/api/course", course, result)
 	return result, err
 }
 
@@ -288,7 +304,7 @@ func (s *Service) UpdateNavSetting(ctx context.Context, courseID int, settings [
 
 // CreateModule creates a new module in a course.
 func (s *Service) CreateModule(ctx context.Context, courseID int, module *Module) (*Module, error) {
-	u := fmt.Sprintf("/api/courses/%d/modules", courseID)
+	u := fmt.Sprintf("/api/course/%d/module", courseID)
 	result := new(Module)
 	_, err := s.client.Post(ctx, u, module, result)
 	return result, err
@@ -304,7 +320,15 @@ func (s *Service) UpdateModule(ctx context.Context, moduleID int, module *Module
 
 // DeleteModule deletes a module.
 func (s *Service) DeleteModule(ctx context.Context, moduleID int) error {
+	return s.DeleteModuleWithOptions(ctx, moduleID, nil)
+}
+
+// DeleteModuleWithOptions deletes a module with optional query parameters.
+func (s *Service) DeleteModuleWithOptions(ctx context.Context, moduleID int, opts *DeleteModuleOptions) error {
 	u := fmt.Sprintf("/api/module/%d", moduleID)
+	if opts != nil && opts.DeleteRelatedActivity {
+		u += "?delete_related_activity=true"
+	}
 	_, err := s.client.Delete(ctx, u, nil)
 	return err
 }

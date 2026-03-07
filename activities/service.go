@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strconv"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/model"
@@ -23,7 +25,24 @@ type Service struct {
 
 // GetActivity returns detailed information about an activity.
 func (s *Service) GetActivity(ctx context.Context, activityID int) (*Activity, error) {
+	return s.GetActivityWithOptions(ctx, activityID, nil)
+}
+
+// GetActivityWithOptions returns detailed information about an activity with optional query fields.
+func (s *Service) GetActivityWithOptions(ctx context.Context, activityID int, opts *GetActivityOptions) (*Activity, error) {
 	u := fmt.Sprintf("/api/activities/%d", activityID)
+	if opts != nil {
+		values := url.Values{}
+		if opts.Fields != "" {
+			values.Set("fields", opts.Fields)
+		}
+		if opts.SubCourseID != nil {
+			values.Set("sub_course_id", strconv.Itoa(*opts.SubCourseID))
+		}
+		if encoded := values.Encode(); encoded != "" {
+			u += "?" + encoded
+		}
+	}
 	result := new(Activity)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
@@ -31,7 +50,7 @@ func (s *Service) GetActivity(ctx context.Context, activityID int) (*Activity, e
 
 // CreateActivity creates a new activity in a course.
 func (s *Service) CreateActivity(ctx context.Context, courseID int, activity interface{}) (*Activity, error) {
-	u := fmt.Sprintf("/api/course/activities/%d", courseID)
+	u := fmt.Sprintf("/api/courses/%d/activities", courseID)
 	result := new(Activity)
 	_, err := s.client.Post(ctx, u, activity, result)
 	return result, err
@@ -47,23 +66,72 @@ func (s *Service) UpdateActivity(ctx context.Context, activityID int, activity i
 
 // DeleteActivity deletes an activity.
 func (s *Service) DeleteActivity(ctx context.Context, activityID int) error {
+	return s.DeleteActivityWithOptions(ctx, activityID, nil)
+}
+
+// DeleteActivityWithOptions deletes an activity with optional query parameters.
+func (s *Service) DeleteActivityWithOptions(ctx context.Context, activityID int, opts *DeleteActivityOptions) error {
 	u := fmt.Sprintf("/api/activities/%d", activityID)
+	if opts != nil {
+		values := url.Values{}
+		if opts.ActivityType != "" {
+			values.Set("activity_type", opts.ActivityType)
+		}
+		if opts.KeepOriginal {
+			values.Set("keep_original", "true")
+		}
+		if encoded := values.Encode(); encoded != "" {
+			u += "?" + encoded
+		}
+	}
 	_, err := s.client.Delete(ctx, u, nil)
 	return err
 }
 
+// BatchDeleteActivities deletes multiple activities in one request.
+func (s *Service) BatchDeleteActivities(ctx context.Context, activityIDs []int) error {
+	_, err := s.client.DeleteWithBody(ctx, "/api/activities", &BatchDeleteActivitiesRequest{ActivityIDs: activityIDs}, nil)
+	return err
+}
+
 // DeleteCheck checks if an activity can be deleted.
-func (s *Service) DeleteCheck(ctx context.Context, activityID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/activities/delete-check?activity_id=%d", activityID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+func (s *Service) DeleteCheck(ctx context.Context, activityID int) (*DeleteCheckResponse, error) {
+	return s.DeleteCheckWithType(ctx, activityID, "")
+}
+
+// DeleteCheckWithType checks if an activity of a specific type can be deleted.
+func (s *Service) DeleteCheckWithType(ctx context.Context, activityID int, activityType string) (*DeleteCheckResponse, error) {
+	values := url.Values{}
+	values.Set("activity_id", strconv.Itoa(activityID))
+	if activityType != "" {
+		values.Set("activity_type", activityType)
+	}
+	u := "/api/activities/delete-check?" + values.Encode()
+	result := new(DeleteCheckResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // HaveDependents checks if activities have dependents.
-func (s *Service) HaveDependents(ctx context.Context, activityIDs []int) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Post(ctx, "/api/activities/have-dependents", map[string][]int{"activity_ids": activityIDs}, &result)
+func (s *Service) HaveDependents(ctx context.Context, activityIDs []int) (*HaveDependentsResponse, error) {
+	return s.HaveDependentsWithType(ctx, activityIDs, "")
+}
+
+// HaveDependentsWithType checks if activities of a specific type have dependents.
+func (s *Service) HaveDependentsWithType(ctx context.Context, activityIDs []int, activityType string) (*HaveDependentsResponse, error) {
+	values := url.Values{}
+	for _, activityID := range activityIDs {
+		values.Add("activity_ids", strconv.Itoa(activityID))
+	}
+	if activityType != "" {
+		values.Set("activity_type", activityType)
+	}
+	u := "/api/activities/have-dependents"
+	if encoded := values.Encode(); encoded != "" {
+		u += "?" + encoded
+	}
+	result := new(HaveDependentsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -91,6 +159,79 @@ func (s *Service) LogExamActivityRead(ctx context.Context, activityID int, body 
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, u, body, &result)
 	return result, err
+}
+
+// GetActivityCompletionCriteria returns available completion criteria for an activity.
+func (s *Service) GetActivityCompletionCriteria(ctx context.Context, activityID int, query *ActivityCriteriaQuery) (*ActivityCompletionCriteriaResponse, error) {
+	u := fmt.Sprintf("/api/activities/%d/completion-criteria", activityID)
+	if query != nil {
+		values := url.Values{}
+		if query.ActivityType != "" {
+			values.Set("activity_type", query.ActivityType)
+		}
+		if query.CourseID > 0 {
+			values.Set("course_id", strconv.Itoa(query.CourseID))
+		}
+		values.Set("no-intercept", "true")
+		u += "?" + values.Encode()
+	}
+	result := new(ActivityCompletionCriteriaResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListPrerequisites returns prerequisite activities for a specific activity.
+func (s *Service) ListPrerequisites(ctx context.Context, activityID int, activityType string) (*ActivityPrerequisitesResponse, error) {
+	u := fmt.Sprintf("/api/activities/%d/prerequisites", activityID)
+	if activityType != "" {
+		u += "?activity_type=" + url.QueryEscape(activityType) + "&no-intercept=true"
+	}
+	result := new(ActivityPrerequisitesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// DeletePrerequisites removes prerequisites for a specific activity.
+func (s *Service) DeletePrerequisites(ctx context.Context, activityID int, activityType string) error {
+	u := fmt.Sprintf("/api/activities/%d/prerequisites", activityID)
+	if activityType != "" {
+		u += "?activity_type=" + url.QueryEscape(activityType)
+	}
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// GetUnavailablePrerequisites returns unavailable prerequisites for an activity.
+func (s *Service) GetUnavailablePrerequisites(ctx context.Context, activityID int, activityType string) (*HaveDependentsResponse, error) {
+	u := fmt.Sprintf("/api/activities/%d/unavailable-prerequisites", activityID)
+	if activityType != "" {
+		u += "?activity_type=" + url.QueryEscape(activityType)
+	}
+	result := new(HaveDependentsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetActivityHasDependents returns whether a single activity has dependents.
+func (s *Service) GetActivityHasDependents(ctx context.Context, activityID int, activityType string) (*HaveDependentsResponse, error) {
+	u := fmt.Sprintf("/api/activities/%d/has-dependents", activityID)
+	if activityType != "" {
+		u += "?activity_type=" + url.QueryEscape(activityType)
+	}
+	result := new(HaveDependentsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// RemoveAllDependants removes all dependent relationships for an activity.
+func (s *Service) RemoveAllDependants(ctx context.Context, activityID int, activityType string) error {
+	u := fmt.Sprintf("/api/activities/%d/remove-all-dependants", activityID)
+	body := map[string]string{}
+	if activityType != "" {
+		body["activity_type"] = activityType
+	}
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
 }
 
 // --- Activity Lock Status ---
@@ -173,6 +314,13 @@ func (s *Service) ListActivityResources(ctx context.Context, activityID int) ([]
 	var result []interface{}
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
+}
+
+// SaveActivityResource saves resources under an activity.
+func (s *Service) SaveActivityResource(ctx context.Context, activityID int) error {
+	u := fmt.Sprintf("/api/activities/resources/%d/save", activityID)
+	_, err := s.client.Post(ctx, u, nil, nil)
+	return err
 }
 
 // --- Classin Integration ---

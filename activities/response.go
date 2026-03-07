@@ -12,7 +12,7 @@ type CommentsResponse struct {
 }
 
 type CommentPageCountResponse struct {
-	PageStats []any `json:"page_stats"`
+	PageStats []CommentPageStat `json:"page_stats"`
 }
 
 type RecommendSubmissionsResponse struct {
@@ -23,9 +23,29 @@ type ActivityResourcesResponse struct {
 	Resources []map[string]any `json:"resources"`
 }
 
-type DeleteCheckResponse map[string]any
+type DeleteCheckResponse struct {
+	SafeDelete bool `json:"safe_delete"`
+}
 
-type HaveDependentsResponse map[string]any
+type HaveDependentsResponse struct {
+	HasDependents            bool            `json:"has_dependents"`
+	UnavailablePrerequisites []*Prerequisite `json:"unavailable_prerequisites,omitempty"`
+}
+
+type ActivityCompletionCriteriaResponse struct {
+	CompletionCriteria     []*CompletionCriterion `json:"completion_criteria"`
+	HasCompletionCriterion bool                   `json:"has_completion_criterion"`
+}
+
+type ActivityPrerequisitesResponse struct {
+	Prerequisites []*Prerequisite `json:"prerequisites"`
+}
+
+type CommentPageStat struct {
+	Page     int `json:"page"`
+	Forum    int `json:"forum,omitempty"`
+	Question int `json:"question,omitempty"`
+}
 
 type ExamActivityReadLogResponse map[string]any
 

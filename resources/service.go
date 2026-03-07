@@ -10,20 +10,6 @@ import (
 	"github.com/eWloYW8/zju-courses-go-sdk/model"
 )
 
-// ResourceGroupFoldersResponse represents the response from ListResourceGroupFolders.
-type ResourceGroupFoldersResponse struct {
-	Folders    []interface{}    `json:"folders"`
-	Pagination model.Pagination `json:"pagination"`
-}
-
-// ResourceGroupResourcesResponse represents the response from ListResourceGroupResources.
-type ResourceGroupResourcesResponse struct {
-	Resources []interface{} `json:"resources"`
-	Page      int           `json:"page"`
-	Pages     int           `json:"pages"`
-	Total     int           `json:"total"`
-}
-
 // Service handles resource management API operations.
 
 func New(client *sdk.Client) *Service {
@@ -37,25 +23,25 @@ type Service struct {
 // --- Resource Groups ---
 
 // ListResourceGroups returns resource groups.
-func (s *Service) ListResourceGroups(ctx context.Context, opts *model.ListOptions) (json.RawMessage, error) {
+func (s *Service) ListResourceGroups(ctx context.Context, opts *model.ListOptions) (*ResourceGroupsResponse, error) {
 	u := addListOptions("/api/resource-groups", opts)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(ResourceGroupsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // GetResourceGroup returns a specific resource group.
-func (s *Service) GetResourceGroup(ctx context.Context, groupID int) (json.RawMessage, error) {
+func (s *Service) GetResourceGroup(ctx context.Context, groupID int) (*model.ResourceGroup, error) {
 	u := fmt.Sprintf("/api/resource-groups/%d", groupID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(model.ResourceGroup)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // CreateResourceGroup creates a new resource group.
-func (s *Service) CreateResourceGroup(ctx context.Context, body interface{}) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Post(ctx, "/api/resource-group", body, &result)
+func (s *Service) CreateResourceGroup(ctx context.Context, body interface{}) (*model.ResourceGroup, error) {
+	result := new(model.ResourceGroup)
+	_, err := s.client.Post(ctx, "/api/resource-group", body, result)
 	return result, err
 }
 
@@ -74,19 +60,34 @@ func (s *Service) DeleteResourceGroup(ctx context.Context, groupID int) error {
 }
 
 // ListPagedResourceGroups returns resource groups using the frontend paging POST API.
-func (s *Service) ListPagedResourceGroups(ctx context.Context, opts *model.ListOptions, body interface{}) (json.RawMessage, error) {
+func (s *Service) ListPagedResourceGroups(ctx context.Context, opts *model.ListOptions, body interface{}) (*ResourceGroupsResponse, error) {
 	u := addListOptions("/api/resource-groups", opts)
-	var result json.RawMessage
-	_, err := s.client.Post(ctx, u, body, &result)
+	result := new(ResourceGroupsResponse)
+	_, err := s.client.Post(ctx, u, body, result)
 	return result, err
 }
 
 // GetResourceGroupMembers returns members of a resource group.
-func (s *Service) GetResourceGroupMembers(ctx context.Context, groupID int) (json.RawMessage, error) {
+func (s *Service) GetResourceGroupMembers(ctx context.Context, groupID int) (*ResourceGroupMembersResponse, error) {
 	u := fmt.Sprintf("/api/resource-groups/%d/members", groupID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(ResourceGroupMembersResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
+}
+
+// ListPagedResourceGroupMembers returns paginated members of a resource group.
+func (s *Service) ListPagedResourceGroupMembers(ctx context.Context, groupID int, opts *model.ListOptions) (*ResourceGroupMembersResponse, error) {
+	u := addListOptions(fmt.Sprintf("/api/resource-groups/%d/members", groupID), opts)
+	result := new(ResourceGroupMembersResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// DeleteResourceGroupMembers removes members from a resource group.
+func (s *Service) DeleteResourceGroupMembers(ctx context.Context, groupID int, body interface{}) error {
+	u := fmt.Sprintf("/api/resource-groups/%d/member", groupID)
+	_, err := s.client.DeleteWithBody(ctx, u, body, nil)
+	return err
 }
 
 // LeaveResourceGroup leaves a resource group.
@@ -97,16 +98,38 @@ func (s *Service) LeaveResourceGroup(ctx context.Context, groupID int) error {
 }
 
 // ListResourceGroupFolders returns folders in a resource group.
-func (s *Service) ListResourceGroupFolders(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/resource-groups/folders", &result)
+func (s *Service) ListResourceGroupFolders(ctx context.Context) (*ResourceGroupFoldersResponse, error) {
+	result := new(ResourceGroupFoldersResponse)
+	_, err := s.client.Get(ctx, "/api/resource-groups/folders", result)
 	return result, err
 }
 
 // ListResourceGroupResources returns resources in a resource group.
-func (s *Service) ListResourceGroupResources(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/resource-groups/resources", &result)
+func (s *Service) ListResourceGroupResources(ctx context.Context) (*ResourceGroupResourcesResponse, error) {
+	result := new(ResourceGroupResourcesResponse)
+	_, err := s.client.Get(ctx, "/api/resource-groups/resources", result)
+	return result, err
+}
+
+// ListPagedResourceGroupFolders returns folders in a specific resource group.
+func (s *Service) ListPagedResourceGroupFolders(ctx context.Context, groupID int, opts *model.ListOptions, conditions string) (*ResourceGroupFoldersResponse, error) {
+	u := addListOptions(fmt.Sprintf("/api/resource-groups/%d/folders", groupID), opts)
+	if conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": conditions})
+	}
+	result := new(ResourceGroupFoldersResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListPagedResourceGroupResources returns resources in a specific resource group.
+func (s *Service) ListPagedResourceGroupResources(ctx context.Context, groupID int, opts *model.ListOptions, conditions string) (*ResourceGroupResourcesResponse, error) {
+	u := addListOptions(fmt.Sprintf("/api/resource-groups/%d/resources", groupID), opts)
+	if conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": conditions})
+	}
+	result := new(ResourceGroupResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -131,32 +154,32 @@ func (s *Service) ListPublicResources(ctx context.Context) (json.RawMessage, err
 // --- Shared Resources ---
 
 // ListSharedResourcesToMe returns resources shared to the current user.
-func (s *Service) ListSharedResourcesToMe(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/shared-resources-to-me", &result)
+func (s *Service) ListSharedResourcesToMe(ctx context.Context) (*SharedResourcesResponse, error) {
+	result := new(SharedResourcesResponse)
+	_, err := s.client.Get(ctx, "/api/shared-resources-to-me", result)
 	return result, err
 }
 
 // ListSharedResources returns shared resources with pagination.
-func (s *Service) ListSharedResources(ctx context.Context, opts *model.ListOptions) (json.RawMessage, error) {
+func (s *Service) ListSharedResources(ctx context.Context, opts *model.ListOptions) (*SharedResourcesResponse, error) {
 	u := addListOptions("/api/shared-resources-no-repeated", opts)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(SharedResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // GetSharedResource returns a specific shared resource.
-func (s *Service) GetSharedResource(ctx context.Context, resourceID int) (json.RawMessage, error) {
+func (s *Service) GetSharedResource(ctx context.Context, resourceID int) (*model.SharedResource, error) {
 	u := fmt.Sprintf("/api/shared-resources/%d", resourceID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(model.SharedResource)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // CreateSharedResource creates a shared resource.
-func (s *Service) CreateSharedResource(ctx context.Context, body interface{}) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Post(ctx, "/api/shared-resources", body, &result)
+func (s *Service) CreateSharedResource(ctx context.Context, body interface{}) (*model.SharedResource, error) {
+	result := new(model.SharedResource)
+	_, err := s.client.Post(ctx, "/api/shared-resources", body, result)
 	return result, err
 }
 
@@ -208,37 +231,37 @@ func (s *Service) ShareToOtherOrgs(ctx context.Context, body interface{}) error 
 }
 
 // GetUserSharedResources returns shared resources for a user.
-func (s *Service) GetUserSharedResources(ctx context.Context, userID int) (json.RawMessage, error) {
+func (s *Service) GetUserSharedResources(ctx context.Context, userID int) (*SharedResourcesResponse, error) {
 	u := fmt.Sprintf("/api/shared-resources/user/%d", userID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(SharedResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // ListSharedResourcesFromMe returns shared resources created by the current user.
-func (s *Service) ListSharedResourcesFromMe(ctx context.Context, opts *model.ListOptions, conditions string) (json.RawMessage, error) {
+func (s *Service) ListSharedResourcesFromMe(ctx context.Context, opts *model.ListOptions, conditions string) (*SharedResourcesResponse, error) {
 	u := addListOptions("/api/shared-resources/from-me", opts)
 	if conditions != "" {
 		u = addQueryParams(u, map[string]string{"conditions": conditions})
 	}
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(SharedResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // ListMostLikedSharedResources returns most liked shared resources.
-func (s *Service) ListMostLikedSharedResources(ctx context.Context, conditions string) (json.RawMessage, error) {
+func (s *Service) ListMostLikedSharedResources(ctx context.Context, conditions string) (*SharedResourcesResponse, error) {
 	u := "/api/shared-resources/most-liked"
 	if conditions != "" {
 		u = addQueryParams(u, map[string]string{"conditions": conditions})
 	}
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(SharedResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // ListRecentUsedSharedResources returns recently used shared resources.
-func (s *Service) ListRecentUsedSharedResources(ctx context.Context, classificationID string, departmentIDs string) (json.RawMessage, error) {
+func (s *Service) ListRecentUsedSharedResources(ctx context.Context, classificationID string, departmentIDs string) (*SharedResourcesResponse, error) {
 	params := map[string]string{}
 	if classificationID != "" {
 		params["classificationId"] = classificationID
@@ -247,8 +270,8 @@ func (s *Service) ListRecentUsedSharedResources(ctx context.Context, classificat
 		params["departmentIds"] = departmentIDs
 	}
 	u := addQueryParams("/api/shared-resources/recent-used", params)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(SharedResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -267,13 +290,13 @@ func (s *Service) DeleteSharedResource(ctx context.Context, resourceID int) erro
 }
 
 // ListUserCollections returns shared-resource collections for a user.
-func (s *Service) ListUserCollections(ctx context.Context, userID int, opts *model.ListOptions, conditions string) (json.RawMessage, error) {
+func (s *Service) ListUserCollections(ctx context.Context, userID int, opts *model.ListOptions, conditions string) (*SharedResourcesResponse, error) {
 	u := addListOptions(fmt.Sprintf("/api/shared-resources/user/%d/collections", userID), opts)
 	if conditions != "" {
 		u = addQueryParams(u, map[string]string{"conditions": conditions})
 	}
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(SharedResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -333,10 +356,10 @@ func (s *Service) CopyThirdPartResources(ctx context.Context, body interface{}) 
 // --- Resource Files ---
 
 // GetResourceFile returns a resource file.
-func (s *Service) GetResourceFile(ctx context.Context, fileID int) (json.RawMessage, error) {
+func (s *Service) GetResourceFile(ctx context.Context, fileID int) (*model.Upload, error) {
 	u := fmt.Sprintf("/api/resource-file/%d", fileID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(model.Upload)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -469,42 +492,96 @@ func (s *Service) ListCertifications(ctx context.Context) (json.RawMessage, erro
 // --- Course Packages ---
 
 // ListCoursePackages returns course packages.
-func (s *Service) ListCoursePackages(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/course-packages", &result)
+func (s *Service) ListCoursePackages(ctx context.Context) (*CoursePackagesResponse, error) {
+	result := new(CoursePackagesResponse)
+	_, err := s.client.Get(ctx, "/api/course-packages", result)
 	return result, err
 }
 
 // GetCoursePackage returns a specific course package.
-func (s *Service) GetCoursePackage(ctx context.Context, packageID int) (json.RawMessage, error) {
+func (s *Service) GetCoursePackage(ctx context.Context, packageID int) (*CoursePackage, error) {
 	u := fmt.Sprintf("/api/course-packages/%d", packageID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(CoursePackage)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
+}
+
+// ListCoursePackagesForCourse returns course packages under a course with pagination.
+func (s *Service) ListCoursePackagesForCourse(ctx context.Context, courseID int, opts *model.ListOptions, keyword string) (*CoursePackagesResponse, error) {
+	u := addListOptions(fmt.Sprintf("/api/courses/%d/course-package", courseID), opts)
+	if keyword != "" {
+		u = addQueryParams(u, map[string]string{"keyword": keyword})
+	}
+	var raw struct {
+		Data CoursePackagesResponse `json:"data"`
+	}
+	_, err := s.client.Get(ctx, u, &raw)
+	return &raw.Data, err
+}
+
+// ExportCoursePackage starts exporting a course package.
+func (s *Service) ExportCoursePackage(ctx context.Context, courseID int, body interface{}) error {
+	u := fmt.Sprintf("/api/courses/%d/course-package/export", courseID)
+	_, err := s.client.Post(ctx, u, body, nil)
+	return err
+}
+
+// GetCoursePackageExportStatus returns export status for the current course package job.
+func (s *Service) GetCoursePackageExportStatus(ctx context.Context, courseID int) (*CoursePackageExportStatusResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/course-package/status", courseID)
+	var raw struct {
+		Data CoursePackageExportStatusResponse `json:"data"`
+	}
+	_, err := s.client.Get(ctx, u, &raw)
+	return &raw.Data, err
+}
+
+// UpdateCoursePackage updates a course package.
+func (s *Service) UpdateCoursePackage(ctx context.Context, packageID int, body interface{}, noCheck bool) error {
+	u := fmt.Sprintf("/api/course-packages/%d", packageID)
+	if noCheck {
+		u += "?no_check=true"
+	}
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// DeleteCoursePackage deletes a course package.
+func (s *Service) DeleteCoursePackage(ctx context.Context, packageID int) error {
+	u := fmt.Sprintf("/api/course-packages/%d", packageID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// SaveCoursePackage saves a course package into resources.
+func (s *Service) SaveCoursePackage(ctx context.Context, packageID int) error {
+	u := fmt.Sprintf("/api/course-packages/%d/save", packageID)
+	_, err := s.client.Post(ctx, u, nil, nil)
+	return err
 }
 
 // --- Public Courses ---
 
 // ListPublicCourses returns public courses.
-func (s *Service) ListPublicCourses(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/courses/public", &result)
+func (s *Service) ListPublicCourses(ctx context.Context) (*PublicCoursesResponse, error) {
+	result := new(PublicCoursesResponse)
+	_, err := s.client.Get(ctx, "/api/courses/public", result)
 	return result, err
 }
 
 // ListHotPublicCourses returns hot public courses.
-func (s *Service) ListHotPublicCourses(ctx context.Context, limit int) (json.RawMessage, error) {
+func (s *Service) ListHotPublicCourses(ctx context.Context, limit int) (*PublicCoursesResponse, error) {
 	u := fmt.Sprintf("/api/courses/public/hot?limit=%d", limit)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(PublicCoursesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // ListLatestPublicCourses returns latest public courses.
-func (s *Service) ListLatestPublicCourses(ctx context.Context, limit int) (json.RawMessage, error) {
+func (s *Service) ListLatestPublicCourses(ctx context.Context, limit int) (*PublicCoursesResponse, error) {
 	u := fmt.Sprintf("/api/courses/public/latest?limit=%d", limit)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(PublicCoursesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 

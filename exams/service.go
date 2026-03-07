@@ -4,22 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+
 	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/model"
 )
-
-// --- Response Types ---
-
-// SubjectLibsResponse represents the response from ListSubjectLibs.
-type SubjectLibsResponse struct {
-	SubjectLibs []json.RawMessage `json:"subject_libs"`
-}
-
-// RubricsResponse represents the response from ListRubrics.
-type RubricsResponse struct {
-	Rubrics []*model.Rubric `json:"rubrics"`
-}
 
 // Service handles exam-related API operations.
 
@@ -203,9 +193,9 @@ func (s *Service) BatchDeleteClassroomSubjects(ctx context.Context, classroomID 
 // --- Courseware Quiz ---
 
 // ListCoursewareQuizzes returns quizzes for a courseware activity.
-func (s *Service) ListCoursewareQuizzes(ctx context.Context, activityID int) ([]interface{}, error) {
+func (s *Service) ListCoursewareQuizzes(ctx context.Context, activityID int) ([]*model.CoursewareQuiz, error) {
 	u := fmt.Sprintf("/api/courseware-quiz/activity/%d/quizzes", activityID)
-	var result []interface{}
+	var result []*model.CoursewareQuiz
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
@@ -215,6 +205,22 @@ func (s *Service) GetCoursewareQuiz(ctx context.Context, quizID int) (json.RawMe
 	u := fmt.Sprintf("/api/courseware-quiz/quiz/%d", quizID)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetCoursewareQuizSubjects returns subjects for a specific courseware quiz.
+func (s *Service) GetCoursewareQuizSubjects(ctx context.Context, quizID int) (*CoursewareQuizSubjectsResponse, error) {
+	u := fmt.Sprintf("/api/courseware-quiz/quiz/%d/subjects", quizID)
+	result := new(CoursewareQuizSubjectsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateCoursewareQuizSubjects updates subjects for a specific courseware quiz.
+func (s *Service) UpdateCoursewareQuizSubjects(ctx context.Context, quizID int, body interface{}) (*CoursewareQuizUpdateResponse, error) {
+	u := fmt.Sprintf("/api/courseware-quiz/quiz/%d/subjects", quizID)
+	result := new(CoursewareQuizUpdateResponse)
+	_, err := s.client.Put(ctx, u, body, result)
 	return result, err
 }
 
@@ -248,9 +254,9 @@ func (s *Service) GenerateSubjectsByText(ctx context.Context, body interface{}) 
 }
 
 // GetCoursewareQuizSettings returns courseware quiz settings.
-func (s *Service) GetCoursewareQuizSettings(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/courseware-quiz/settings", &result)
+func (s *Service) GetCoursewareQuizSettings(ctx context.Context) (*CoursewareQuizSettingsResponse, error) {
+	result := new(CoursewareQuizSettingsResponse)
+	_, err := s.client.Get(ctx, "/api/courseware-quiz/settings", result)
 	return result, err
 }
 
@@ -264,27 +270,83 @@ func (s *Service) ListSubjectLibs(ctx context.Context, params map[string]string)
 	return result, err
 }
 
+// ListSubjectLibsWithFolder returns subject libraries with an optional folder tree.
+func (s *Service) ListSubjectLibsWithFolder(ctx context.Context, withFolder bool) (*SubjectLibsResponse, error) {
+	value := "0"
+	if withFolder {
+		value = "1"
+	}
+	return s.ListSubjectLibs(ctx, map[string]string{"with_folder": value})
+}
+
+// ListCourseSubjectLibs returns subject libraries scoped to a course.
+func (s *Service) ListCourseSubjectLibs(ctx context.Context, courseID int, withFolder bool) (*SubjectLibsResponse, error) {
+	value := "0"
+	if withFolder {
+		value = "1"
+	}
+	u := fmt.Sprintf("/api/course/%d/subject-libs?with_folder=%s", courseID, value)
+	result := new(SubjectLibsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListQuestionnaireSubjectLibs returns questionnaire subject libraries.
+func (s *Service) ListQuestionnaireSubjectLibs(ctx context.Context) (*SubjectLibsResponse, error) {
+	result := new(SubjectLibsResponse)
+	_, err := s.client.Get(ctx, "/api/subject-libs?lib_type=questionnaire", result)
+	return result, err
+}
+
 // GetSubjectLib returns a specific subject library.
-func (s *Service) GetSubjectLib(ctx context.Context, libID int) (json.RawMessage, error) {
+func (s *Service) GetSubjectLib(ctx context.Context, libID int) (*SubjectLib, error) {
 	u := fmt.Sprintf("/api/subject-libs/%d", libID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(SubjectLib)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // CreateSubjectLib creates a new subject library.
-func (s *Service) CreateSubjectLib(ctx context.Context, body interface{}) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Post(ctx, "/api/subject-libs", body, &result)
+func (s *Service) CreateSubjectLib(ctx context.Context, body interface{}) (*SubjectLib, error) {
+	result := new(SubjectLib)
+	_, err := s.client.Post(ctx, "/api/subject-libs", body, result)
+	return result, err
+}
+
+// CreateCourseSubjectLib creates a course-scoped subject library or folder.
+func (s *Service) CreateCourseSubjectLib(ctx context.Context, courseID int, libType string, body interface{}) (*SubjectLib, error) {
+	u := fmt.Sprintf("/api/course/%d/subject-libs?lib_type=%s", courseID, libType)
+	result := new(SubjectLib)
+	_, err := s.client.Post(ctx, u, body, result)
+	return result, err
+}
+
+// CreateQuestionnaireSubjectLib creates a questionnaire subject library.
+func (s *Service) CreateQuestionnaireSubjectLib(ctx context.Context, body interface{}) (*SubjectLib, error) {
+	result := new(SubjectLib)
+	_, err := s.client.Post(ctx, "/api/subject-libs?lib_type=questionnaire", body, result)
 	return result, err
 }
 
 // GetSubject returns a specific subject/question.
-func (s *Service) GetSubject(ctx context.Context, subjectID int) (json.RawMessage, error) {
+func (s *Service) GetSubject(ctx context.Context, subjectID int) (*model.ExamSubject, error) {
 	u := fmt.Sprintf("/api/subjects/%d", subjectID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(model.ExamSubject)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
+}
+
+// SearchSubjectsInLib returns subjects in a subject library filtered by keyword/type.
+func (s *Service) SearchSubjectsInLib(ctx context.Context, libID int, keyword, subjectType string) ([]*model.ExamSubject, error) {
+	u := fmt.Sprintf("/api/subject-libs/%d?keyword=%s", libID, url.QueryEscape(keyword))
+	if subjectType != "" {
+		u += "&subject_type=" + url.QueryEscape(subjectType)
+	}
+	var result struct {
+		Subjects []*model.ExamSubject `json:"subjects"`
+	}
+	_, err := s.client.Get(ctx, u, &result)
+	return result.Subjects, err
 }
 
 // RandomSubjects gets random subjects from a library.
@@ -309,6 +371,34 @@ func (s *Service) CopySubjectLibsToUser(ctx context.Context, body interface{}) (
 	return result, err
 }
 
+// CopySubjectLibToExam copies a subject library into an exam.
+func (s *Service) CopySubjectLibToExam(ctx context.Context, examID, libID int) error {
+	u := fmt.Sprintf("/api/subject-libs/%d/copy?examId=%d", libID, examID)
+	_, err := s.client.Post(ctx, u, nil, nil)
+	return err
+}
+
+// CopySubjectLibToClassroom copies a subject library into a classroom quiz.
+func (s *Service) CopySubjectLibToClassroom(ctx context.Context, classroomID, libID int) error {
+	u := fmt.Sprintf("/api/subject-libs/%d/copy?classroomId=%d", libID, classroomID)
+	_, err := s.client.Post(ctx, u, nil, nil)
+	return err
+}
+
+// CopySubjectLibToCoursewareQuiz copies a subject library into a courseware quiz.
+func (s *Service) CopySubjectLibToCoursewareQuiz(ctx context.Context, videoQuizID, libID int) error {
+	u := fmt.Sprintf("/api/subject-libs/%d/copy?videoQuizId=%d", libID, videoQuizID)
+	_, err := s.client.Post(ctx, u, nil, nil)
+	return err
+}
+
+// CopySubjectLibToQuestionnaire copies a subject library into a questionnaire.
+func (s *Service) CopySubjectLibToQuestionnaire(ctx context.Context, questionnaireID, libID int) error {
+	u := fmt.Sprintf("/api/subject-libs/%d/copy?questionnaireId=%d", libID, questionnaireID)
+	_, err := s.client.Post(ctx, u, nil, nil)
+	return err
+}
+
 // MoveSubjectLibs moves subject libraries in the folder tree.
 func (s *Service) MoveSubjectLibs(ctx context.Context, body interface{}) (json.RawMessage, error) {
 	var result json.RawMessage
@@ -322,6 +412,13 @@ func (s *Service) BatchCopySubjectLibs(ctx context.Context, coursewareQuizID int
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, u, body, &result)
 	return result, err
+}
+
+// BatchCopySubjectLibsToCoursewareQuiz copies multiple subject libraries to a courseware quiz context.
+func (s *Service) BatchCopySubjectLibsToCoursewareQuiz(ctx context.Context, coursewareQuizID int, body *BatchCopySubjectLibsRequest) error {
+	u := fmt.Sprintf("/api/subject-libs/batch/copy?courseware_quiz_id=%d", coursewareQuizID)
+	_, err := s.client.Post(ctx, u, body, nil)
+	return err
 }
 
 // --- Rubrics ---
@@ -342,9 +439,9 @@ func (s *Service) GetRubricTemplate(ctx context.Context) (*model.RubricInstance,
 }
 
 // CreateRubric creates a new rubric.
-func (s *Service) CreateRubric(ctx context.Context, body interface{}) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Post(ctx, "/api/rubrics", body, &result)
+func (s *Service) CreateRubric(ctx context.Context, body interface{}) (*model.Rubric, error) {
+	result := new(model.Rubric)
+	_, err := s.client.Post(ctx, "/api/rubrics", body, result)
 	return result, err
 }
 

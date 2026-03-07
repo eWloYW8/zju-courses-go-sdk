@@ -36,26 +36,26 @@ func (s *Service) GetConfig(ctx context.Context) (*model.Config, error) {
 }
 
 // GetLangSettings returns language settings for an organization.
-func (s *Service) GetLangSettings(ctx context.Context, orgID int) (json.RawMessage, error) {
+func (s *Service) GetLangSettings(ctx context.Context, orgID int) (*model.LangSettingsResponse, error) {
 	u := fmt.Sprintf("/api/orgs/%d/lang-settings", orgID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(model.LangSettingsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // GetOrg returns organization information.
-func (s *Service) GetOrg(ctx context.Context, orgID int) (json.RawMessage, error) {
+func (s *Service) GetOrg(ctx context.Context, orgID int) (*model.OrgDetail, error) {
 	u := fmt.Sprintf("/api/orgs/%d", orgID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(model.OrgDetail)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // GetOrgDepartments returns departments for an organization.
-func (s *Service) GetOrgDepartments(ctx context.Context, orgID int) (json.RawMessage, error) {
+func (s *Service) GetOrgDepartments(ctx context.Context, orgID int) (*DepartmentsResponse, error) {
 	u := fmt.Sprintf("/api/orgs/%d/departments", orgID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(DepartmentsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -84,25 +84,25 @@ func (s *Service) GetPortalLogo(ctx context.Context) (json.RawMessage, error) {
 // --- Departments ---
 
 // ListDepartments returns all departments.
-func (s *Service) ListDepartments(ctx context.Context, params map[string]string) (json.RawMessage, error) {
+func (s *Service) ListDepartments(ctx context.Context, params map[string]string) (*DepartmentsResponse, error) {
 	u := addQueryParams("/api/departments", params)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(DepartmentsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // GetDepartment returns a specific department.
-func (s *Service) GetDepartment(ctx context.Context, deptID int) (json.RawMessage, error) {
+func (s *Service) GetDepartment(ctx context.Context, deptID int) (*model.Department, error) {
 	u := fmt.Sprintf("/api/departments/%d", deptID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(model.Department)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // ListDepartmentsForUser returns departments for the current user.
-func (s *Service) ListDepartmentsForUser(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/departments-for-user", &result)
+func (s *Service) ListDepartmentsForUser(ctx context.Context) (*DepartmentsResponse, error) {
+	result := new(DepartmentsResponse)
+	_, err := s.client.Get(ctx, "/api/departments-for-user", result)
 	return result, err
 }
 
@@ -124,41 +124,41 @@ func (s *Service) ListTopDepartments(ctx context.Context, fields string) (json.R
 // --- Academic Years & Semesters ---
 
 // ListAcademicYears returns all academic years.
-func (s *Service) ListAcademicYears(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/academic-years?fields=id,name,sort,is_active", &result)
+func (s *Service) ListAcademicYears(ctx context.Context) (*AcademicYearsResponse, error) {
+	result := new(AcademicYearsResponse)
+	_, err := s.client.Get(ctx, "/api/academic-years?fields=id,name,sort,is_active", result)
 	return result, err
 }
 
 // ListSemesters returns all semesters.
-func (s *Service) ListSemesters(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/semesters", &result)
+func (s *Service) ListSemesters(ctx context.Context) (*SemestersResponse, error) {
+	result := new(SemestersResponse)
+	_, err := s.client.Get(ctx, "/api/semesters", result)
 	return result, err
 }
 
 // ListClasses returns all classes.
-func (s *Service) ListClasses(ctx context.Context, params map[string]string) (json.RawMessage, error) {
+func (s *Service) ListClasses(ctx context.Context, params map[string]string) (*ClassesResponse, error) {
 	u := addQueryParams("/api/classes", params)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(ClassesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // ListGrades returns grades.
-func (s *Service) ListGrades(ctx context.Context, params map[string]string) (json.RawMessage, error) {
+func (s *Service) ListGrades(ctx context.Context, params map[string]string) (*GradesResponse, error) {
 	u := addQueryParams("/api/grades", params)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(GradesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // --- Outline Settings ---
 
 // GetOutlineSetting returns outline setting options.
-func (s *Service) GetOutlineSetting(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/outline-setting", &result)
+func (s *Service) GetOutlineSetting(ctx context.Context) (*model.OutlineSettingResponse, error) {
+	result := new(model.OutlineSettingResponse)
+	_, err := s.client.Get(ctx, "/api/outline-setting", result)
 	return result, err
 }
 
