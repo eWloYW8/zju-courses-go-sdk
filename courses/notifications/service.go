@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles notification, todo, and alert API operations.
@@ -34,6 +34,13 @@ func (s *Service) ListNotifications(ctx context.Context, userID int, opts *model
 func (s *Service) ListTodos(ctx context.Context) (*TodosResponse, error) {
 	result := new(TodosResponse)
 	_, err := s.client.Get(ctx, "/api/todos?exclude_questionnaire=true", result)
+	return result, err
+}
+
+// ListTodosNoIntercept returns todos using the lightweight homepage endpoint.
+func (s *Service) ListTodosNoIntercept(ctx context.Context) (*TodosResponse, error) {
+	result := new(TodosResponse)
+	_, err := s.client.Get(ctx, "/api/todos?no-intercept=true", result)
 	return result, err
 }
 
@@ -85,12 +92,54 @@ func (s *Service) MarkBulletinRead(ctx context.Context, bulletinID int, orgID in
 	return err
 }
 
-// CreateBulletin creates a new bulletin (instructor).
+// ListCourseBulletins returns bulletins for a course.
+func (s *Service) ListCourseBulletins(ctx context.Context, courseID int, conditions string) (*BulletinsResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/bulletins", courseID)
+	if conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": conditions})
+	}
+	result := new(BulletinsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// CreateBulletin creates a new course bulletin.
 func (s *Service) CreateBulletin(ctx context.Context, courseID int, body CreateBulletinRequest) (*Bulletin, error) {
-	u := fmt.Sprintf("/api/course/bulletins/%d", courseID)
+	u := fmt.Sprintf("/api/course/%d/bulletin", courseID)
 	result := new(Bulletin)
 	_, err := s.client.Post(ctx, u, body, result)
 	return result, err
+}
+
+// UpdateCourseBulletin updates a course bulletin.
+func (s *Service) UpdateCourseBulletin(ctx context.Context, bulletinID int, body CreateBulletinRequest, opts CourseBulletinOptions) (*Bulletin, error) {
+	u := fmt.Sprintf("/api/course/bulletins/%d", bulletinID)
+	params := map[string]string{}
+	if opts.OrgID > 0 {
+		params["org_id"] = fmt.Sprintf("%d", opts.OrgID)
+	}
+	if opts.IsManagement {
+		params["isManagement"] = "true"
+	}
+	u = addQueryParams(u, params)
+	result := new(Bulletin)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
+}
+
+// DeleteCourseBulletin deletes a course bulletin.
+func (s *Service) DeleteCourseBulletin(ctx context.Context, bulletinID int, opts CourseBulletinOptions) error {
+	u := fmt.Sprintf("/api/course/bulletins/%d", bulletinID)
+	params := map[string]string{}
+	if opts.OrgID > 0 {
+		params["org_id"] = fmt.Sprintf("%d", opts.OrgID)
+	}
+	if opts.IsManagement {
+		params["isManagement"] = "true"
+	}
+	u = addQueryParams(u, params)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
 }
 
 // --- Org Bulletins ---

@@ -2,6 +2,7 @@ package homework
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/activities"
@@ -90,6 +91,21 @@ func (s *Service) GetMarkedAttachment(ctx context.Context, submissionID, attachm
 func (s *Service) RecommendSubmission(ctx context.Context, submissionIDs []int) error {
 	_, err := s.client.Put(ctx, "/api/submission/recommend", &RecommendSubmissionRequest{SubmissionIDs: submissionIDs}, nil)
 	return err
+}
+
+// MarkSubmissionRead marks a submission as read.
+func (s *Service) MarkSubmissionRead(ctx context.Context, submissionID int) error {
+	u := fmt.Sprintf("/api/submissions/%d/read", submissionID)
+	_, err := s.client.Post(ctx, u, nil, nil)
+	return err
+}
+
+// UpdateMarkedSubmitted updates the marked-submitted state for homework submissions.
+func (s *Service) UpdateMarkedSubmitted(ctx context.Context, activityID int, body *MarkedSubmittedRequest) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course/activities/%d/submission/marked_submitted", activityID)
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, body, &result)
+	return result, err
 }
 
 // --- Homework Management (Instructor) ---

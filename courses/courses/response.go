@@ -35,7 +35,7 @@ type HomeworkScoresResponse struct {
 }
 
 type HomeworkSubmissionStatusResponse struct {
-	CourseID           int                        `json:"course_id"`
+	CourseID           int                         `json:"course_id"`
 	HomeworkActivities []*HomeworkSubmissionStatus `json:"homework_activities"`
 }
 
@@ -57,6 +57,11 @@ type ActivityReadsForUserResponse struct {
 
 type CourseCustomScoreItemsResponse struct {
 	CustomScoreItems []*CustomScoreItem `json:"custom_score_items"`
+}
+
+type CourseAccessCodeResponse struct {
+	AccessCode string `json:"access_code"`
+	Resetable  bool   `json:"resetable"`
 }
 
 type EntryRecordResponse map[string]any

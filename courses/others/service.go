@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles miscellaneous API operations that don't fit neatly into other modules.
@@ -28,6 +28,17 @@ func (s *Service) ListProjects(ctx context.Context) (json.RawMessage, error) {
 	return result, err
 }
 
+// ListProjectsWithParams returns projects with frontend paging/filter parameters.
+func (s *Service) ListProjectsWithParams(ctx context.Context, params ListProjectsParams) (*ProjectsResponse, error) {
+	u := addListOptions("/api/projects", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if params.Conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": params.Conditions})
+	}
+	result := new(ProjectsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // GetProject returns a project.
 func (s *Service) GetProject(ctx context.Context, projectID int) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/project/%d", projectID)
@@ -40,6 +51,41 @@ func (s *Service) GetProject(ctx context.Context, projectID int) (json.RawMessag
 func (s *Service) CreateProject(ctx context.Context, body interface{}) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, "/api/project", body, &result)
+	return result, err
+}
+
+// ApplyProject submits a project application.
+func (s *Service) ApplyProject(ctx context.Context, projectID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/projects/%d/apply", projectID)
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, nil, &result)
+	return result, err
+}
+
+// ListProjectApplications returns paged applications for a project.
+func (s *Service) ListProjectApplications(ctx context.Context, projectID int, params ListProjectsParams) (*ProjectApplicationsResponse, error) {
+	u := addListOptions(fmt.Sprintf("/api/projects/%d/apply", projectID), &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if params.Conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": params.Conditions})
+	}
+	result := new(ProjectApplicationsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateProject updates a project.
+func (s *Service) UpdateProject(ctx context.Context, projectID int, body interface{}) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/project/%d", projectID)
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, body, &result)
+	return result, err
+}
+
+// AuditProjectApplication audits a project application.
+func (s *Service) AuditProjectApplication(ctx context.Context, projectID, applicationID int, status string) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/projects/%d/audit/%d", projectID, applicationID)
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, AuditProjectApplicationRequest{Status: status}, &result)
 	return result, err
 }
 

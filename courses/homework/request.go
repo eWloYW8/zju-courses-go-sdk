@@ -30,3 +30,10 @@ type ScoreSubmissionRequest struct {
 type RecommendSubmissionRequest struct {
 	SubmissionIDs []int `json:"submission_ids"`
 }
+
+type MarkedSubmittedRequest struct {
+	SubmissionIDs     []int    `json:"submission_ids,omitempty"`
+	StudentOrGroupIDs []int    `json:"student_or_group_ids,omitempty"`
+	MarkedSubmitted   int      `json:"marked_submitted"`
+	SubmittedStatus   []string `json:"submittedStatus,omitempty"`
+}

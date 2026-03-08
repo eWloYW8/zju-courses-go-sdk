@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles resource management API operations.
@@ -99,15 +99,33 @@ func (s *Service) LeaveResourceGroup(ctx context.Context, groupID int) error {
 
 // ListResourceGroupFolders returns folders in a resource group.
 func (s *Service) ListResourceGroupFolders(ctx context.Context) (*ResourceGroupFoldersResponse, error) {
+	return s.ListResourceGroupFoldersWithParams(ctx, ListResourceGroupItemsParams{})
+}
+
+// ListResourceGroupFoldersWithParams returns paged folders across all resource groups.
+func (s *Service) ListResourceGroupFoldersWithParams(ctx context.Context, params ListResourceGroupItemsParams) (*ResourceGroupFoldersResponse, error) {
+	u := addListOptions("/api/resource-groups/folders", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if params.Conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": params.Conditions})
+	}
 	result := new(ResourceGroupFoldersResponse)
-	_, err := s.client.Get(ctx, "/api/resource-groups/folders", result)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // ListResourceGroupResources returns resources in a resource group.
 func (s *Service) ListResourceGroupResources(ctx context.Context) (*ResourceGroupResourcesResponse, error) {
+	return s.ListResourceGroupResourcesWithParams(ctx, ListResourceGroupItemsParams{})
+}
+
+// ListResourceGroupResourcesWithParams returns paged resources across all resource groups.
+func (s *Service) ListResourceGroupResourcesWithParams(ctx context.Context, params ListResourceGroupItemsParams) (*ResourceGroupResourcesResponse, error) {
+	u := addListOptions("/api/resource-groups/resources", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if params.Conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": params.Conditions})
+	}
 	result := new(ResourceGroupResourcesResponse)
-	_, err := s.client.Get(ctx, "/api/resource-groups/resources", result)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -162,7 +180,20 @@ func (s *Service) ListSharedResourcesToMe(ctx context.Context) (*SharedResources
 
 // ListSharedResources returns shared resources with pagination.
 func (s *Service) ListSharedResources(ctx context.Context, opts *model.ListOptions) (*SharedResourcesResponse, error) {
-	u := addListOptions("/api/shared-resources-no-repeated", opts)
+	params := ListSharedResourcesParams{}
+	if opts != nil {
+		params.Page = opts.Page
+		params.PageSize = opts.PageSize
+	}
+	return s.ListSharedResourcesWithParams(ctx, params)
+}
+
+// ListSharedResourcesWithParams returns shared resources with pagination and conditions.
+func (s *Service) ListSharedResourcesWithParams(ctx context.Context, params ListSharedResourcesParams) (*SharedResourcesResponse, error) {
+	u := addListOptions("/api/shared-resources-no-repeated", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if params.Conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": params.Conditions})
+	}
 	result := new(SharedResourcesResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
@@ -228,6 +259,13 @@ func (s *Service) ListSharedResourceManagement(ctx context.Context) (json.RawMes
 func (s *Service) ShareToOtherOrgs(ctx context.Context, body interface{}) error {
 	_, err := s.client.Post(ctx, "/api/shared-resources/admin/to-other-orgs", body, nil)
 	return err
+}
+
+// ListShareToOtherOrgsOpenedOrgs returns organizations available for the shared-resource admin view.
+func (s *Service) ListShareToOtherOrgsOpenedOrgs(ctx context.Context) (json.RawMessage, error) {
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, "/api/toggle-opened-orgs?toggle=share_resource_to_other_orgs&include_current_org=0", &result)
+	return result, err
 }
 
 // GetUserSharedResources returns shared resources for a user.
@@ -614,6 +652,38 @@ func (s *Service) CreateCourseEstimate(ctx context.Context, body interface{}) (j
 func (s *Service) CreateCourseEstimateReply(ctx context.Context, body interface{}) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, "/api/course-estimate-reply", body, &result)
+	return result, err
+}
+
+// ListCourseEstimateReplies returns replies for a course estimate.
+func (s *Service) ListCourseEstimateReplies(ctx context.Context, estimateID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course-estimate-replies/%d", estimateID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListCourseEstimatesReplies returns course-level estimate replies.
+func (s *Service) ListCourseEstimatesReplies(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course-estimates-replies/%d", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// DeleteCourseEstimateReply soft-deletes a course estimate reply.
+func (s *Service) DeleteCourseEstimateReply(ctx context.Context, replyID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course-estimate-reply/%d/delete", replyID)
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, nil, &result)
+	return result, err
+}
+
+// DeleteCourseEstimate soft-deletes a course estimate.
+func (s *Service) DeleteCourseEstimate(ctx context.Context, estimateID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course-estimate/%d/delete", estimateID)
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, nil, &result)
 	return result, err
 }
 

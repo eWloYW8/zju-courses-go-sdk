@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
+	"net/url"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
 )
@@ -51,6 +52,13 @@ func (s *Service) GetOrg(ctx context.Context, orgID int) (*model.OrgDetail, erro
 	return result, err
 }
 
+// GetCurrentOrg returns the current organization information.
+func (s *Service) GetCurrentOrg(ctx context.Context) (*model.OrgDetail, error) {
+	result := new(model.OrgDetail)
+	_, err := s.client.Get(ctx, "/api/org", result)
+	return result, err
+}
+
 // GetOrgDepartments returns departments for an organization.
 func (s *Service) GetOrgDepartments(ctx context.Context, orgID int) (*DepartmentsResponse, error) {
 	u := fmt.Sprintf("/api/orgs/%d/departments", orgID)
@@ -71,6 +79,21 @@ func (s *Service) GetOrgAssociatedPartnerTypes(ctx context.Context, orgID int) (
 func (s *Service) ListAllOrgs(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, "/api/all-orgs", &result)
+	return result, err
+}
+
+// ListOrgsByIDs returns organizations by repeated id query parameters.
+func (s *Service) ListOrgsByIDs(ctx context.Context, orgIDs []int) (json.RawMessage, error) {
+	values := url.Values{}
+	for _, id := range orgIDs {
+		values.Add("id", fmt.Sprintf("%d", id))
+	}
+	u := "/api/orgs"
+	if encoded := values.Encode(); encoded != "" {
+		u += "?" + encoded
+	}
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
@@ -192,8 +215,26 @@ func (s *Service) ListUsers(ctx context.Context, opts *model.ListOptions) (json.
 
 // ListUsersForManagement returns users for management views with filters.
 func (s *Service) ListUsersForManagement(ctx context.Context, opts *model.ListOptions, body interface{}) (json.RawMessage, error) {
+	return s.ListUsersForManagementWithParams(ctx, opts, body, ListUsersForManagementParams{
+		ForManagement:   true,
+		NeedAIActivated: true,
+	})
+}
+
+// ListUsersForManagementWithParams returns users for management views with filters and query options.
+func (s *Service) ListUsersForManagementWithParams(ctx context.Context, opts *model.ListOptions, body interface{}, params ListUsersForManagementParams) (json.RawMessage, error) {
 	u := addListOptions("/api/users", opts)
-	u = addQueryParams(u, map[string]string{"for_management": "true", "need_ai_activated": "true"})
+	query := map[string]string{}
+	if params.ForManagement {
+		query["for_management"] = "true"
+	}
+	if params.NeedAIActivated {
+		query["need_ai_activated"] = "true"
+	}
+	if params.IgnoreAvatar {
+		query["ignore_avatar"] = "true"
+	}
+	u = addQueryParams(u, query)
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, u, body, &result)
 	return result, err
@@ -207,11 +248,18 @@ func (s *Service) GetUserByType(ctx context.Context, userType, responseKey strin
 	return result, err
 }
 
+// ListInstructorUsers returns instructor users using the frontend endpoint shape.
+func (s *Service) ListInstructorUsers(ctx context.Context) (json.RawMessage, error) {
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, "/api/user?type=instructor", &result)
+	return result, err
+}
+
 // --- Enrollments Management ---
 
 // CreateEnrollment creates an enrollment.
 func (s *Service) CreateEnrollment(ctx context.Context, courseID int, body interface{}) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/course/enrollments/%d", courseID)
+	u := fmt.Sprintf("/api/course/%d/enrollments", courseID)
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, u, body, &result)
 	return result, err
@@ -219,9 +267,17 @@ func (s *Service) CreateEnrollment(ctx context.Context, courseID int, body inter
 
 // DeleteEnrollment deletes an enrollment.
 func (s *Service) DeleteEnrollment(ctx context.Context, enrollmentID int) error {
-	u := fmt.Sprintf("/api/enrollments/%d", enrollmentID)
+	u := fmt.Sprintf("/api/course/enrollments/%d", enrollmentID)
 	_, err := s.client.Delete(ctx, u, nil)
 	return err
+}
+
+// ChangeEnrollmentRole updates the role of an enrollment using the frontend endpoint shape.
+func (s *Service) ChangeEnrollmentRole(ctx context.Context, enrollmentID int, body ChangeEnrollmentRoleRequest) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course/enrollments/%d", enrollmentID)
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, body, &result)
+	return result, err
 }
 
 // --- Invites ---

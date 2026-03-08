@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles activity-related API operations.
@@ -150,6 +150,53 @@ func (s *Service) MarkActivityRead(ctx context.Context, activityID int) (*Activi
 	u := fmt.Sprintf("/api/course/activity-read/%d", activityID)
 	result := new(ActivityRead)
 	_, err := s.client.Post(ctx, u, nil, result)
+	return result, err
+}
+
+// GetStudentSubmission returns a student's current submission for a course activity.
+func (s *Service) GetStudentSubmission(ctx context.Context, activityID, studentID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course/activities/%d/students/%d/submission", activityID, studentID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// CreateCourseActivitySubmission creates a submission draft or final submission for a course activity.
+func (s *Service) CreateCourseActivitySubmission(ctx context.Context, activityID int, body interface{}) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course/activities/%d/submissions", activityID)
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// UpdateCourseActivitySubmission updates a submission draft for a course activity.
+func (s *Service) UpdateCourseActivitySubmission(ctx context.Context, activityID int, body interface{}) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course/activities/%d/submissions", activityID)
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, body, &result)
+	return result, err
+}
+
+// ScoreCourseActivitySubmission scores a course activity submission.
+func (s *Service) ScoreCourseActivitySubmission(ctx context.Context, activityID int, body interface{}) (json.RawMessage, error) {
+	values := url.Values{}
+	values.Set("fields", "id,score,instructor_comment,rubric_score,final_score")
+	values.Set("need_submission_correct", "true")
+	u := fmt.Sprintf("/api/course/activities/%d/submission/score?%s", activityID, values.Encode())
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, body, &result)
+	return result, err
+}
+
+// SaveWebLinkScore updates a student's score for a web link activity.
+func (s *Service) SaveWebLinkScore(ctx context.Context, activityID, studentID int, score interface{}) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course/activities/%d/web_link_score", activityID)
+	body := map[string]interface{}{
+		"student_id": studentID,
+		"score":      score,
+	}
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, body, &result)
 	return result, err
 }
 

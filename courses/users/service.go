@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles user-related API operations.
@@ -67,7 +68,20 @@ func (s *Service) GetUserByID(ctx context.Context, userID int) (*UserProfile, er
 
 // ListResources returns the current user's uploaded resources.
 func (s *Service) ListResources(ctx context.Context, opts *model.ListOptions) (*UserResourcesResponse, error) {
-	u := addListOptions("/api/user/resources", opts)
+	params := ListUserResourcesParams{}
+	if opts != nil {
+		params.Page = opts.Page
+		params.PageSize = opts.PageSize
+	}
+	return s.ListResourcesWithParams(ctx, params)
+}
+
+// ListResourcesWithParams returns the current user's uploaded resources with optional filter conditions.
+func (s *Service) ListResourcesWithParams(ctx context.Context, params ListUserResourcesParams) (*UserResourcesResponse, error) {
+	u := addListOptions("/api/user/resources", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if params.Conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": params.Conditions})
+	}
 	result := new(UserResourcesResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
@@ -84,8 +98,17 @@ func (s *Service) GetStorageUsed(ctx context.Context) (*StorageUsedResponse, err
 
 // ListMyAcademicYears returns the user's academic years.
 func (s *Service) ListMyAcademicYears(ctx context.Context) (*AcademicYearsResponse, error) {
+	return s.ListMyAcademicYearsWithFields(ctx, "id,name,sort,is_active")
+}
+
+// ListMyAcademicYearsWithFields returns the user's academic years with an explicit field list.
+func (s *Service) ListMyAcademicYearsWithFields(ctx context.Context, fields string) (*AcademicYearsResponse, error) {
+	u := "/api/my-academic-years"
+	if fields != "" {
+		u += "?fields=" + url.QueryEscape(fields)
+	}
 	result := new(AcademicYearsResponse)
-	_, err := s.client.Get(ctx, "/api/my-academic-years", result)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -103,13 +126,36 @@ func (s *Service) ListMySemesters(ctx context.Context) (*SemestersResponse, erro
 	return result, err
 }
 
+// ListMySemestersByAcademicYears returns semesters filtered by academic year ids using the frontend query format.
+func (s *Service) ListMySemestersByAcademicYears(ctx context.Context, academicYearIDs []int) (*SemestersResponse, error) {
+	values := url.Values{}
+	for _, id := range academicYearIDs {
+		values.Add("academic_year_ids", fmt.Sprintf("%d", id))
+	}
+	u := "/api/my-semesters"
+	if encoded := values.Encode(); encoded != "" {
+		u += "?" + encoded
+	}
+	result := new(SemestersResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // ListMyCurriculumSemesters returns the user's curriculum semesters.
 func (s *Service) ListMyCurriculumSemesters(ctx context.Context, academicYearIDs []int) (*SemestersResponse, error) {
-	params := map[string]string{}
-	for i, id := range academicYearIDs {
-		params[fmt.Sprintf("academic_year_ids[%d]", i)] = fmt.Sprintf("%d", id)
+	return s.ListMyCurriculumSemestersByAcademicYears(ctx, academicYearIDs)
+}
+
+// ListMyCurriculumSemestersByAcademicYears returns curriculum semesters using repeated academic_year_ids parameters.
+func (s *Service) ListMyCurriculumSemestersByAcademicYears(ctx context.Context, academicYearIDs []int) (*SemestersResponse, error) {
+	values := url.Values{}
+	for _, id := range academicYearIDs {
+		values.Add("academic_year_ids", fmt.Sprintf("%d", id))
 	}
-	u := addQueryParams("/api/my-curriculum-semesters", params)
+	u := "/api/my-curriculum-semesters"
+	if encoded := values.Encode(); encoded != "" {
+		u += "?" + encoded
+	}
 	result := new(SemestersResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
@@ -117,8 +163,26 @@ func (s *Service) ListMyCurriculumSemesters(ctx context.Context, academicYearIDs
 
 // ListMyAllSemesters returns all semesters for the user.
 func (s *Service) ListMyAllSemesters(ctx context.Context) (*SemestersResponse, error) {
+	return s.ListMyAllSemestersWithParams(ctx, ListMyAllSemestersParams{
+		Fields: "id,name,sort,is_active",
+	})
+}
+
+// ListMyAllSemestersWithParams returns all semesters for the user with optional academic year filters.
+func (s *Service) ListMyAllSemestersWithParams(ctx context.Context, params ListMyAllSemestersParams) (*SemestersResponse, error) {
+	values := url.Values{}
+	for _, id := range params.AcademicYearIDs {
+		values.Add("academic_year_ids", fmt.Sprintf("%d", id))
+	}
+	if params.Fields != "" {
+		values.Set("fields", params.Fields)
+	}
+	u := "/api/my-semesters-all"
+	if encoded := values.Encode(); encoded != "" {
+		u += "?" + encoded
+	}
 	result := new(SemestersResponse)
-	_, err := s.client.Get(ctx, "/api/my-semesters-all", result)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -133,6 +197,13 @@ func (s *Service) ListMyDepartments(ctx context.Context) (*DepartmentsResponse, 
 func (s *Service) ListMyClasses(ctx context.Context) (*ClassesResponse, error) {
 	result := new(ClassesResponse)
 	_, err := s.client.Get(ctx, "/api/my-classes", result)
+	return result, err
+}
+
+// ListMyTeachingClasses returns the current user's teaching classes.
+func (s *Service) ListMyTeachingClasses(ctx context.Context) (*ClassesResponse, error) {
+	result := new(ClassesResponse)
+	_, err := s.client.Get(ctx, "/api/my-teaching-classes", result)
 	return result, err
 }
 
@@ -209,6 +280,28 @@ func (s *Service) CheckCourseGraduate(ctx context.Context, courseID int) (Course
 func (s *Service) CheckCoursesGraduate(ctx context.Context, body CheckCoursesGraduateRequest) (CourseGraduateCheckResponse, error) {
 	var result CourseGraduateCheckResponse
 	_, err := s.client.Post(ctx, "/api/user/check-course-graduate", body, &result)
+	return result, err
+}
+
+// StickCourse pins a course for the current user.
+func (s *Service) StickCourse(ctx context.Context, courseID int) error {
+	u := fmt.Sprintf("/api/user/course/%d/stick", courseID)
+	_, err := s.client.Post(ctx, u, nil, nil)
+	return err
+}
+
+// UnstickCourse unpins a course for the current user.
+func (s *Service) UnstickCourse(ctx context.Context, courseID int) error {
+	u := fmt.Sprintf("/api/user/course/%d/unstick", courseID)
+	_, err := s.client.Post(ctx, u, nil, nil)
+	return err
+}
+
+// GetCourseResourceFolder returns the current user's resource folder for a course.
+func (s *Service) GetCourseResourceFolder(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/user/course/%d/resources/folder", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles meeting and live classroom related API operations.
@@ -105,8 +105,31 @@ func (s *Service) GetDingTalkLive(ctx context.Context, liveID int) (json.RawMess
 
 // ListVTRSes returns VTRS entries.
 func (s *Service) ListVTRSes(ctx context.Context) (json.RawMessage, error) {
+	return s.ListVTRSesWithParams(ctx, nil)
+}
+
+// ListVTRSesWithParams returns VTRS entries with frontend filter options.
+func (s *Service) ListVTRSesWithParams(ctx context.Context, params *ListVTRSesParams) (json.RawMessage, error) {
+	u := "/api/vtrses"
+	if params != nil {
+		query := map[string]string{}
+		if params.Conditions != "" {
+			query["conditions"] = params.Conditions
+		}
+		if params.NeedStat != nil {
+			if *params.NeedStat {
+				query["needStat"] = "true"
+			} else {
+				query["needStat"] = "false"
+			}
+		}
+		if params.Fields != "" {
+			query["fields"] = params.Fields
+		}
+		u = addQueryParams(u, query)
+	}
 	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/vtrses", &result)
+	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
@@ -120,26 +143,104 @@ func (s *Service) GetVTRS(ctx context.Context, vtrsID int) (json.RawMessage, err
 
 // GetVTRSAccessCode gets the access code for a VTRS.
 func (s *Service) GetVTRSAccessCode(ctx context.Context, vtrsID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/vtrses/access-code/%d", vtrsID)
+	u := fmt.Sprintf("/api/vtrses/%d/access-code", vtrsID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// RefreshVTRSAccessCode refreshes the access code for a VTRS.
+func (s *Service) RefreshVTRSAccessCode(ctx context.Context, vtrsID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/access-code", vtrsID)
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, nil, &result)
+	return result, err
+}
+
+// ValidateVTRSAccessCode validates a VTRS access code.
+func (s *Service) ValidateVTRSAccessCode(ctx context.Context, vtrsID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/vtrses/access-code/%d/validate", vtrsID)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
 // ListVTRSMeetingClassifications returns VTRS meeting classifications.
-func (s *Service) ListVTRSMeetingClassifications(ctx context.Context, vtrsID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/vtrses/meetings/classifications/%d", vtrsID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+func (s *Service) ListVTRSMeetingClassifications(ctx context.Context, vtrsID int) (*VTRSMeetingClassificationsResponse, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/meetings/classifications", vtrsID)
+	result := new(VTRSMeetingClassificationsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
+// DeleteVTRSMeetingClassification deletes a meeting classification.
+func (s *Service) DeleteVTRSMeetingClassification(ctx context.Context, classificationID int) error {
+	u := fmt.Sprintf("/api/vtrses/meetings/classifications/%d", classificationID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// CreateVTRSMeetingClassification creates a meeting classification.
+func (s *Service) CreateVTRSMeetingClassification(ctx context.Context, vtrsID int, body *CreateVTRSMeetingClassificationRequest) (*VTRSMeetingClassification, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/meetings/classifications", vtrsID)
+	result := new(VTRSMeetingClassification)
+	var raw struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+	_, err := s.client.Post(ctx, u, body, &raw)
+	if err != nil {
+		return nil, err
+	}
+	result.ID = raw.ID
+	result.Name = raw.Name
+	return result, nil
+}
+
+// UpdateVTRSMeetingClassification updates a meeting classification.
+func (s *Service) UpdateVTRSMeetingClassification(ctx context.Context, classificationID int, name string) error {
+	u := fmt.Sprintf("/api/vtrses/meetings/classifications/%d", classificationID)
+	_, err := s.client.Put(ctx, u, &UpdateVTRSMeetingClassificationRequest{ID: classificationID, Name: name}, nil)
+	return err
+}
+
 // ListVTRSResourceClassifications returns VTRS resource classifications.
-func (s *Service) ListVTRSResourceClassifications(ctx context.Context, vtrsID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/vtrses/resources/classifications/%d", vtrsID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+func (s *Service) ListVTRSResourceClassifications(ctx context.Context, vtrsID int) (*VTRSResourceClassificationsResponse, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/resources/classifications", vtrsID)
+	result := new(VTRSResourceClassificationsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
+}
+
+// DeleteVTRSResourceClassification deletes a resource classification.
+func (s *Service) DeleteVTRSResourceClassification(ctx context.Context, classificationID int) error {
+	u := fmt.Sprintf("/api/vtrses/resources/classifications/%d", classificationID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// CreateVTRSResourceClassification creates a resource classification.
+func (s *Service) CreateVTRSResourceClassification(ctx context.Context, vtrsID int, body *CreateVTRSResourceClassificationRequest) (*VTRSResourceClassification, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/resources/classifications", vtrsID)
+	var raw struct {
+		Classification *VTRSResourceClassification `json:"classification"`
+	}
+	_, err := s.client.Post(ctx, u, body, &raw)
+	return raw.Classification, err
+}
+
+// UpdateVTRSResourceClassification updates a resource classification.
+func (s *Service) UpdateVTRSResourceClassification(ctx context.Context, classificationID int, body *UpdateVTRSResourceClassificationRequest) error {
+	u := fmt.Sprintf("/api/vtrses/resources/classifications/%d", classificationID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// SortVTRSResourceClassifications sorts resource classifications inside a VTRS.
+func (s *Service) SortVTRSResourceClassifications(ctx context.Context, vtrsID int, classificationIDs []int) error {
+	u := fmt.Sprintf("/api/vtrses/%d/resources/classifications/sort", vtrsID)
+	_, err := s.client.Put(ctx, u, &SortVTRSResourceClassificationsRequest{Classifications: classificationIDs}, nil)
+	return err
 }
 
 // ShareVTRSResources shares VTRS resources.
@@ -148,11 +249,163 @@ func (s *Service) ShareVTRSResources(ctx context.Context, body interface{}) erro
 	return err
 }
 
+// ListVTRSShareResources returns paged shared resources for VTRS contexts.
+func (s *Service) ListVTRSShareResources(ctx context.Context, params *ListVTRSShareResourcesParams) (*VTRSShareResourcesResponse, error) {
+	query := map[string]string{}
+	if params != nil {
+		if params.RefParentType != "" {
+			query["ref_parent_type"] = params.RefParentType
+		}
+		if params.Page > 0 {
+			query["page"] = fmt.Sprintf("%d", params.Page)
+		}
+		if params.PageSize > 0 {
+			query["page_size"] = fmt.Sprintf("%d", params.PageSize)
+		}
+		if params.Conditions != "" {
+			query["conditions"] = params.Conditions
+		}
+	}
+	result := new(VTRSShareResourcesResponse)
+	_, err := s.client.Get(ctx, addQueryParams("/api/vtrses/share-resources", query), result)
+	return result, err
+}
+
+// CreateVTRSResources adds resources to a VTRS.
+func (s *Service) CreateVTRSResources(ctx context.Context, vtrsID int, body *CreateVTRSResourcesRequest) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/resources", vtrsID)
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// ListVTRSResources returns paged resources under a VTRS.
+func (s *Service) ListVTRSResources(ctx context.Context, vtrsID int, params *ListVTRSResourcesParams) (*VTRSResourcesResponse, error) {
+	query := map[string]string{}
+	if params != nil {
+		if params.ParentFolderID != nil {
+			query["parent_folder_id"] = fmt.Sprintf("%d", *params.ParentFolderID)
+		}
+		if params.ClassificationID != nil {
+			query["classification_id"] = fmt.Sprintf("%d", *params.ClassificationID)
+		}
+		if params.Page > 0 {
+			query["page"] = fmt.Sprintf("%d", params.Page)
+		}
+		if params.PageSize > 0 {
+			query["page_size"] = fmt.Sprintf("%d", params.PageSize)
+		}
+		if params.Conditions != "" {
+			query["conditions"] = params.Conditions
+		}
+	}
+	u := addQueryParams(fmt.Sprintf("/api/vtrses/%d/resources", vtrsID), query)
+	result := new(VTRSResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetVTRSResourcesSummary returns resource summary counts for a VTRS.
+func (s *Service) GetVTRSResourcesSummary(ctx context.Context, vtrsID int) (VTRSResourcesSummaryResponse, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/resources/summary", vtrsID)
+	var result VTRSResourcesSummaryResponse
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// DeleteVTRSResources removes resources from a VTRS.
+func (s *Service) DeleteVTRSResources(ctx context.Context, vtrsID int, body *UploadReferenceIDsRequest) error {
+	u := fmt.Sprintf("/api/vtrses/%d/resources", vtrsID)
+	_, err := s.client.DeleteWithBody(ctx, u, body, nil)
+	return err
+}
+
+// UpdateVTRSResources updates resource references inside a VTRS.
+func (s *Service) UpdateVTRSResources(ctx context.Context, vtrsID int, body *UploadReferencesRequest) error {
+	u := fmt.Sprintf("/api/vtrses/%d/resources", vtrsID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// SaveVTRSResources saves selected VTRS resources into another context.
+func (s *Service) SaveVTRSResources(ctx context.Context, vtrsID int, body *UploadReferenceIDsRequest) error {
+	u := fmt.Sprintf("/api/vtrses/%d/save-resources", vtrsID)
+	_, err := s.client.Post(ctx, u, body, nil)
+	return err
+}
+
 // ListVTRSSubjectLibs returns VTRS subject libraries.
 func (s *Service) ListVTRSSubjectLibs(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, "/api/vtrses/subject-libs", &result)
 	return result, err
+}
+
+// CreateVTRSSubjectLib creates a subject library under a VTRS.
+func (s *Service) CreateVTRSSubjectLib(ctx context.Context, vtrsID int, body *CreateVTRSSubjectLibRequest, libType string) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/subject-libs", vtrsID)
+	if libType != "" {
+		u = addQueryParams(u, map[string]string{"lib_type": libType})
+	}
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// ListVTRSSubjectLibsWithParams returns paged VTRS subject libraries.
+func (s *Service) ListVTRSSubjectLibsWithParams(ctx context.Context, vtrsID int, params *ListVTRSSubjectLibsParams) (*VTRSSubjectLibsResponse, error) {
+	query := map[string]string{}
+	if params != nil {
+		if params.Keyword != "" {
+			query["keyword"] = params.Keyword
+		}
+		if params.ParentID != nil {
+			query["parent_id"] = fmt.Sprintf("%d", *params.ParentID)
+		}
+		if params.ClassificationID != nil {
+			query["classification_id"] = fmt.Sprintf("%d", *params.ClassificationID)
+		}
+		if params.Page > 0 {
+			query["page"] = fmt.Sprintf("%d", params.Page)
+		}
+		if params.PageSize > 0 {
+			query["page_size"] = fmt.Sprintf("%d", params.PageSize)
+		}
+		if params.Predicate != "" {
+			query["predicate"] = params.Predicate
+		}
+		if params.Reverse != nil {
+			if *params.Reverse {
+				query["reverse"] = "true"
+			} else {
+				query["reverse"] = "false"
+			}
+		}
+		if params.LibType != "" {
+			query["lib_type"] = params.LibType
+		}
+	}
+	u := addQueryParams(fmt.Sprintf("/api/vtrses/%d/subject-libs", vtrsID), query)
+	var raw struct {
+		SubjectLibs []json.RawMessage `json:"subject_libs"`
+		Page        int               `json:"page"`
+		PageSize    int               `json:"page_size"`
+		Pages       int               `json:"pages"`
+		Total       int               `json:"total"`
+	}
+	_, err := s.client.Get(ctx, u, &raw)
+	if err != nil {
+		return nil, err
+	}
+	return &VTRSSubjectLibsResponse{
+		Items: raw.SubjectLibs,
+		Pagination: model.Pagination{
+			Page:     raw.Page,
+			PageSize: raw.PageSize,
+			Pages:    raw.Pages,
+			Total:    raw.Total,
+		},
+	}, nil
 }
 
 // --- Instruction Team Meeting ---
@@ -200,6 +453,18 @@ func (s *Service) ListLessonRooms(ctx context.Context) (json.RawMessage, error) 
 func (s *Service) ListRoomLocations(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, "/api/room-locations", &result)
+	return result, err
+}
+
+// ListEnabledRoomLocations returns room locations that are available for the given time window.
+func (s *Service) ListEnabledRoomLocations(ctx context.Context, orgID int, startTime, endTime string) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/org/%d/enable-room-locations", orgID)
+	u = addQueryParams(u, map[string]string{
+		"start_time": startTime,
+		"end_time":   endTime,
+	})
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 

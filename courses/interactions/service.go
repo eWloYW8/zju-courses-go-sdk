@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles interaction-related API operations.
@@ -25,6 +25,13 @@ func (s *Service) GetInteraction(ctx context.Context, interactionID int) (json.R
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
+}
+
+// DeleteInteraction deletes a course interaction.
+func (s *Service) DeleteInteraction(ctx context.Context, interactionID int) error {
+	u := fmt.Sprintf("/api/interactions/%d", interactionID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
 }
 
 // VoteInteraction votes on an interaction.

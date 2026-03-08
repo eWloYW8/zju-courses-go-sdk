@@ -31,6 +31,26 @@ func (s *Service) GetExam(ctx context.Context, examID int) (*Exam, error) {
 	return result, err
 }
 
+// GetExamMakeUpRecord returns the make-up record for an exam.
+func (s *Service) GetExamMakeUpRecord(ctx context.Context, examID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/exam/%d/make-up-record", examID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// CheckExamQualification checks whether the current user can access an exam.
+func (s *Service) CheckExamQualification(ctx context.Context, examID int, checkStatus string) (json.RawMessage, error) {
+	params := map[string]string{}
+	if checkStatus != "" {
+		params["check_status"] = checkStatus
+	}
+	u := addQueryParams(fmt.Sprintf("/api/exam/%d/check-exam-qualification?no-intercept=true", examID), params)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // CreateExam creates a new exam.
 func (s *Service) CreateExam(ctx context.Context, courseID int, exam interface{}) (*Exam, error) {
 	u := fmt.Sprintf("/api/exams/%d", courseID)
@@ -431,6 +451,19 @@ func (s *Service) ListRubrics(ctx context.Context, params map[string]string) (*R
 	return result, err
 }
 
+// ListRubricsWithResource returns rubrics together with resource metadata used by the web UI.
+func (s *Service) ListRubricsWithResource(ctx context.Context, opts *model.ListOptions, keyword string) (*RubricsResponse, error) {
+	u := addListOptions("/api/rubrics-with-resource", opts)
+	u = addQueryParams(u, map[string]string{
+		"keyword":      keyword,
+		"no-intercept": "true",
+		"fields":       "id,name,conditions,created_by,created_at,group_id,group_name,is_shared_rubric",
+	})
+	result := new(RubricsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // GetRubricTemplate returns the default rubric template.
 func (s *Service) GetRubricTemplate(ctx context.Context) (*model.RubricInstance, error) {
 	result := new(model.RubricInstance)
@@ -454,8 +487,37 @@ func (s *Service) UpdateRubric(ctx context.Context, rubricID int, body interface
 
 // DeleteRubric deletes a rubric.
 func (s *Service) DeleteRubric(ctx context.Context, rubricID int) error {
-	u := fmt.Sprintf("/api/rubrics/%d", rubricID)
+	u := fmt.Sprintf("/api/rubric/%d?fields=id", rubricID)
 	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// UpdateSubjectGroup updates a subject group.
+func (s *Service) UpdateSubjectGroup(ctx context.Context, subjectGroupID int, body interface{}) (*SubjectGroup, error) {
+	u := fmt.Sprintf("/api/subject-group/%d", subjectGroupID)
+	result := new(SubjectGroup)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
+}
+
+// DeleteSubjectGroup deletes a subject group.
+func (s *Service) DeleteSubjectGroup(ctx context.Context, subjectGroupID int) error {
+	u := fmt.Sprintf("/api/subject-group/%d", subjectGroupID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// SortSubjectGroupSubjects sorts subjects within a subject group.
+func (s *Service) SortSubjectGroupSubjects(ctx context.Context, subjectGroupID int, body interface{}) error {
+	u := fmt.Sprintf("/api/subject-group/%d/subjects/sort", subjectGroupID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// SortExamSubjectGroups sorts subject groups within an exam.
+func (s *Service) SortExamSubjectGroups(ctx context.Context, examID int, body interface{}) error {
+	u := fmt.Sprintf("/api/exam/%d/subject-groups/sort", examID)
+	_, err := s.client.Put(ctx, u, body, nil)
 	return err
 }
 
@@ -471,6 +533,13 @@ func (s *Service) GenerateRubric(ctx context.Context, body interface{}) (json.Ra
 // MakeUpExam creates a make-up exam record.
 func (s *Service) MakeUpExam(ctx context.Context, body MakeUpExamRequest) error {
 	_, err := s.client.Post(ctx, "/api/make-up-exams", body, nil)
+	return err
+}
+
+// ImportMakeUpExamSubjects imports subjects into a make-up exam.
+func (s *Service) ImportMakeUpExamSubjects(ctx context.Context, examID int) error {
+	u := fmt.Sprintf("/api/make-up-exams/%d/subjects/import", examID)
+	_, err := s.client.Post(ctx, u, nil, nil)
 	return err
 }
 
@@ -506,4 +575,11 @@ func (s *Service) ListSubmittedExams(ctx context.Context, courseID int) (*Submit
 
 func addQueryParams(urlStr string, params map[string]string) string {
 	return sdk.AddQueryParams(urlStr, params)
+}
+
+func addListOptions(urlStr string, opts *model.ListOptions) string {
+	if opts == nil {
+		return urlStr
+	}
+	return sdk.AddListOptions(urlStr, opts.Page, opts.PageSize)
 }

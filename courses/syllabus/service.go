@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles syllabus-related API operations.
@@ -56,9 +56,24 @@ func (s *Service) DeleteSyllabusWithOptions(ctx context.Context, syllabusID int,
 	return err
 }
 
+// GetSyllabusHasDependents returns whether a syllabus has dependent activities.
+func (s *Service) GetSyllabusHasDependents(ctx context.Context, syllabusID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/syllabuses/%d/has-dependents", syllabusID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // ResortSyllabus resorts syllabuses.
 func (s *Service) ResortSyllabus(ctx context.Context, body interface{}) error {
 	_, err := s.client.Put(ctx, "/api/syllabus/resort", body, nil)
+	return err
+}
+
+// UpdateSyllabusActivitiesSort updates activity order within a syllabus container.
+func (s *Service) UpdateSyllabusActivitiesSort(ctx context.Context, syllabusID int, body interface{}) error {
+	u := fmt.Sprintf("/api/syllabus/%d/activity-sort", syllabusID)
+	_, err := s.client.Put(ctx, u, body, nil)
 	return err
 }
 

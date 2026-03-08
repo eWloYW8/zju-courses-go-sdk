@@ -35,10 +35,18 @@ func (s *Service) CreateCourseCustomScoreItem(ctx context.Context, courseID int,
 // --- Access Code ---
 
 // GetCourseAccessCode returns the access code for a course.
-func (s *Service) GetCourseAccessCode(ctx context.Context, courseID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/course/access-code/%d", courseID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+func (s *Service) GetCourseAccessCode(ctx context.Context, courseID int) (*CourseAccessCodeResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/access_code", courseID)
+	result := new(CourseAccessCodeResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ResetCourseAccessCode regenerates the access code for a course.
+func (s *Service) ResetCourseAccessCode(ctx context.Context, courseID int) (*CourseAccessCodeResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/access_code", courseID)
+	result := new(CourseAccessCodeResponse)
+	_, err := s.client.Put(ctx, u, nil, result)
 	return result, err
 }
 

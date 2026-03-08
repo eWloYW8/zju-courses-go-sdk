@@ -7,8 +7,8 @@ import (
 	"net/url"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/activities"
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles course-related API operations.
@@ -103,7 +103,15 @@ func (s *Service) ListEnrollments(ctx context.Context, courseID int) (*Enrollmen
 
 // GetEnrollmentUser returns enrollment details for a specific user.
 func (s *Service) GetEnrollmentUser(ctx context.Context, courseID, userID int) (*EnrollmentDetail, error) {
-	u := fmt.Sprintf("/api/courses/%d/enrollments/users/%d", courseID, userID)
+	return s.GetEnrollmentUserWithFields(ctx, courseID, userID, "")
+}
+
+// GetEnrollmentUserWithFields returns enrollment details using the frontend endpoint shape.
+func (s *Service) GetEnrollmentUserWithFields(ctx context.Context, courseID, userID int, fields string) (*EnrollmentDetail, error) {
+	u := fmt.Sprintf("/api/course/%d/enrollment/%d", courseID, userID)
+	if fields != "" {
+		u = addQueryParams(u, map[string]string{"fields": fields})
+	}
 	result := new(EnrollmentDetail)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
@@ -114,6 +122,14 @@ func (s *Service) ListInstructors(ctx context.Context, courseID int) (*Enrollmen
 	u := fmt.Sprintf("/api/course/%d/instructors", courseID)
 	result := new(EnrollmentsResponse)
 	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListAllSections returns all sections for a course.
+func (s *Service) ListAllSections(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/courses/%d/all-sections", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
@@ -253,6 +269,29 @@ func (s *Service) DeleteModuleWithOptions(ctx context.Context, moduleID int, opt
 	}
 	_, err := s.client.Delete(ctx, u, nil)
 	return err
+}
+
+// GetModuleHasDependents returns whether a module has dependent activities.
+func (s *Service) GetModuleHasDependents(ctx context.Context, moduleID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/modules/%d/has-dependents", moduleID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// UpdateModuleActivitiesSort updates the activity order within a module.
+func (s *Service) UpdateModuleActivitiesSort(ctx context.Context, moduleID int, body interface{}) error {
+	u := fmt.Sprintf("/api/modules/%d/activity-sort", moduleID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// CreateModuleInteraction creates an interaction activity directly under a module.
+func (s *Service) CreateModuleInteraction(ctx context.Context, moduleID int, body interface{}) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/modules/%d/interaction", moduleID)
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
 }
 
 // ResortActivities resorts activities in a course.

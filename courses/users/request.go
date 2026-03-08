@@ -61,6 +61,17 @@ type ThirdPartResourcesParams struct {
 	Conditions string
 }
 
+type ListUserResourcesParams struct {
+	Page       int
+	PageSize   int
+	Conditions string
+}
+
+type ListMyAllSemestersParams struct {
+	AcademicYearIDs []int
+	Fields          string
+}
+
 type OtherVideoResourcesParams struct {
 	Page     int
 	PageSize int

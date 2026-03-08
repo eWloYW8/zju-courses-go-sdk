@@ -10,8 +10,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles file upload and resource-related API operations.
@@ -153,6 +153,22 @@ func (s *Service) ShareToCourses(ctx context.Context, body *ShareToCoursesReques
 // GetDocumentPreviewURL returns a document preview URL.
 func (s *Service) GetDocumentPreviewURL(ctx context.Context, uploadID int) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/uploads/document/%d/url?preview=true", uploadID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetReferenceDocumentPreviewURL returns a document preview URL for an upload reference.
+func (s *Service) GetReferenceDocumentPreviewURL(ctx context.Context, referenceID int) (*UploadURLResponse, error) {
+	u := fmt.Sprintf("/api/uploads/reference/document/%d/url?preview=true", referenceID)
+	result := new(UploadURLResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetEmbedMaterial returns preview metadata for an embedded material upload.
+func (s *Service) GetEmbedMaterial(ctx context.Context, uploadID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/uploads/embed-material/%d", uploadID)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err

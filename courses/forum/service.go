@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles forum-related API operations.
@@ -26,6 +26,17 @@ func (s *Service) GetCategory(ctx context.Context, categoryID int, opts *model.L
 	result := new(ForumCategoryResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
+}
+
+// ExportCategoryTopics exports category topics as an Excel file.
+func (s *Service) ExportCategoryTopics(ctx context.Context, categoryID int) ([]byte, error) {
+	u := fmt.Sprintf("/api/categories/%d/export/excel", categoryID)
+	req, err := s.client.NewRequest(ctx, "POST", u, map[string]any{})
+	if err != nil {
+		return nil, err
+	}
+	_, body, err := s.client.DoBytes(req)
+	return body, err
 }
 
 // --- Topics ---

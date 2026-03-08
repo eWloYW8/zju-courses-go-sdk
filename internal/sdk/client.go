@@ -143,6 +143,30 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 	return response, nil
 }
 
+func (c *Client) DoBytes(req *http.Request) (*Response, []byte, error) {
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	response := &Response{Response: resp}
+	bodyBytes, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return response, nil, readErr
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return response, bodyBytes, &APIError{
+			StatusCode: resp.StatusCode,
+			Message:    string(bodyBytes),
+			URL:        req.URL.String(),
+		}
+	}
+
+	return response, bodyBytes, nil
+}
+
 func (c *Client) Get(ctx context.Context, url string, v interface{}) (*Response, error) {
 	req, err := c.NewRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
