@@ -32,7 +32,7 @@ func (s *Service) GetCourseKnowledgeGraph(ctx context.Context, courseID int) (*K
 }
 
 // GetKnowledgeNodeTrees returns knowledge-node trees for a course.
-func (s *Service) GetKnowledgeNodeTrees(ctx context.Context, courseID int) ([]*model.KnowledgeNode, error) {
+func (s *Service) GetKnowledgeNodeTrees(ctx context.Context, courseID int) ([]*KnowledgeNode, error) {
 	u := fmt.Sprintf("/api/course/%d/knowledge-nodes", courseID)
 	result := new(KnowledgeNodesResponse)
 	_, err := s.client.Get(ctx, u, result)
@@ -43,25 +43,25 @@ func (s *Service) GetKnowledgeNodeTrees(ctx context.Context, courseID int) ([]*m
 }
 
 // GetKnowledgeNode returns a knowledge node.
-func (s *Service) GetKnowledgeNode(ctx context.Context, nodeID int) (*model.KnowledgeNode, error) {
+func (s *Service) GetKnowledgeNode(ctx context.Context, nodeID int) (*KnowledgeNode, error) {
 	u := fmt.Sprintf("/api/knowledge-node/%d", nodeID)
-	result := new(model.KnowledgeNode)
+	result := new(KnowledgeNode)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // CreateKnowledgeNode creates a knowledge node in a course.
-func (s *Service) CreateKnowledgeNode(ctx context.Context, courseID int, body interface{}) (*model.KnowledgeNode, error) {
+func (s *Service) CreateKnowledgeNode(ctx context.Context, courseID int, body interface{}) (*KnowledgeNode, error) {
 	u := fmt.Sprintf("/api/course/%d/knowledge-node", courseID)
-	result := new(model.KnowledgeNode)
+	result := new(KnowledgeNode)
 	_, err := s.client.Post(ctx, u, body, result)
 	return result, err
 }
 
 // UpdateKnowledgeNode updates a knowledge node.
-func (s *Service) UpdateKnowledgeNode(ctx context.Context, nodeID int, body interface{}) (*model.KnowledgeNode, error) {
+func (s *Service) UpdateKnowledgeNode(ctx context.Context, nodeID int, body interface{}) (*KnowledgeNode, error) {
 	u := fmt.Sprintf("/api/knowledge-node/%d", nodeID)
-	result := new(model.KnowledgeNode)
+	result := new(KnowledgeNode)
 	_, err := s.client.Put(ctx, u, body, result)
 	return result, err
 }

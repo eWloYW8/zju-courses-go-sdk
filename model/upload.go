@@ -78,11 +78,3 @@ type UploadReference struct {
 	Upload     *Upload `json:"upload,omitempty"`
 }
 
-// SCORMCMIData represents SCORM CMI learner data.
-type SCORMCMIData struct {
-	CMI            interface{} `json:"cmi"`
-	SuspendData    interface{} `json:"suspend_data,omitempty"`
-	TotalPages     int         `json:"total_pages,omitempty"`
-	VisitedPages   int         `json:"visited_pages,omitempty"`
-	CompletedPages int         `json:"completed_pages,omitempty"`
-}

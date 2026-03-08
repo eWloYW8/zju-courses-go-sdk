@@ -20,25 +20,25 @@ type Service struct {
 }
 
 // GetGroupSet returns a group set.
-func (s *Service) GetGroupSet(ctx context.Context, groupSetID int) (*model.GroupSet, error) {
+func (s *Service) GetGroupSet(ctx context.Context, groupSetID int) (*GroupSet, error) {
 	u := fmt.Sprintf("/api/group-sets/%d", groupSetID)
-	result := new(model.GroupSet)
+	result := new(GroupSet)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // GetGroup returns a group.
-func (s *Service) GetGroup(ctx context.Context, groupID int) (*model.Group, error) {
+func (s *Service) GetGroup(ctx context.Context, groupID int) (*Group, error) {
 	u := fmt.Sprintf("/api/groups/%d", groupID)
-	result := new(model.Group)
+	result := new(Group)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // GetMyGroup returns the current user's group within a group set.
-func (s *Service) GetMyGroup(ctx context.Context, groupSetID int) (*model.Group, error) {
+func (s *Service) GetMyGroup(ctx context.Context, groupSetID int) (*Group, error) {
 	u := fmt.Sprintf("/api/group-sets/%d/group", groupSetID)
-	result := new(model.Group)
+	result := new(Group)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }

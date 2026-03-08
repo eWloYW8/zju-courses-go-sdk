@@ -3,12 +3,12 @@ package resources
 import "github.com/eWloYW8/zju-courses-go-sdk/model"
 
 type ResourceGroupsResponse struct {
-	ResourceGroups []*model.ResourceGroup `json:"resource_groups"`
+	ResourceGroups []*ResourceGroup `json:"resource_groups"`
 	model.Pagination
 }
 
 type ResourceGroupFoldersResponse struct {
-	Folders []*model.ResourceFolder `json:"folders"`
+	Folders []*ResourceFolder `json:"folders"`
 	model.Pagination
 }
 

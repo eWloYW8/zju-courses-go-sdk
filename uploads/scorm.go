@@ -15,15 +15,15 @@ import (
 // --- SCORM CMI (Computer Managed Instruction) ---
 
 // GetSCORMCMI returns SCORM CMI data for an activity and SCO.
-func (s *Service) GetSCORMCMI(ctx context.Context, activityID int, scoID string) (*model.SCORMCMIData, error) {
+func (s *Service) GetSCORMCMI(ctx context.Context, activityID int, scoID string) (*SCORMCMIData, error) {
 	u := fmt.Sprintf("/api/activity/%d/scorm/%s/cmi", activityID, scoID)
-	result := new(model.SCORMCMIData)
+	result := new(SCORMCMIData)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // UpdateSCORMCMI updates SCORM CMI data for an activity and SCO.
-func (s *Service) UpdateSCORMCMI(ctx context.Context, activityID int, scoID string, data *model.SCORMCMIData) error {
+func (s *Service) UpdateSCORMCMI(ctx context.Context, activityID int, scoID string, data *SCORMCMIData) error {
 	u := fmt.Sprintf("/api/activity/%d/scorm/%s/cmi", activityID, scoID)
 	_, err := s.client.Post(ctx, u, data, nil)
 	return err

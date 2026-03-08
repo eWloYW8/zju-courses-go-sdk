@@ -31,16 +31,16 @@ func (s *Service) ListResourceGroups(ctx context.Context, opts *model.ListOption
 }
 
 // GetResourceGroup returns a specific resource group.
-func (s *Service) GetResourceGroup(ctx context.Context, groupID int) (*model.ResourceGroup, error) {
+func (s *Service) GetResourceGroup(ctx context.Context, groupID int) (*ResourceGroup, error) {
 	u := fmt.Sprintf("/api/resource-groups/%d", groupID)
-	result := new(model.ResourceGroup)
+	result := new(ResourceGroup)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // CreateResourceGroup creates a new resource group.
-func (s *Service) CreateResourceGroup(ctx context.Context, body interface{}) (*model.ResourceGroup, error) {
-	result := new(model.ResourceGroup)
+func (s *Service) CreateResourceGroup(ctx context.Context, body interface{}) (*ResourceGroup, error) {
+	result := new(ResourceGroup)
 	_, err := s.client.Post(ctx, "/api/resource-group", body, result)
 	return result, err
 }

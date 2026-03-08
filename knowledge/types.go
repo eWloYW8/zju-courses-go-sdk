@@ -2,6 +2,18 @@ package knowledge
 
 import "github.com/eWloYW8/zju-courses-go-sdk/model"
 
+// KnowledgeNode represents a knowledge node in the course knowledge tree.
+type KnowledgeNode struct {
+	ID         int              `json:"id"`
+	Name       string           `json:"name,omitempty"`
+	ParentID   *int             `json:"parent_id,omitempty"`
+	CourseID   int              `json:"course_id,omitempty"`
+	Sort       int              `json:"sort,omitempty"`
+	Level      int              `json:"level,omitempty"`
+	Children   []*KnowledgeNode `json:"children,omitempty"`
+	Activities []*model.Activity `json:"activities,omitempty"`
+}
+
 type KnowledgeCapture struct {
 	ID        int     `json:"id"`
 	Code      string  `json:"code,omitempty"`
@@ -211,7 +223,7 @@ type KnowledgeGraphSnapshotRelation struct {
 }
 
 type KnowledgeGraphSnapshot struct {
-	Tree         *model.KnowledgeNode              `json:"tree,omitempty"`
+	Tree         *KnowledgeNode              `json:"tree,omitempty"`
 	Relations    []*KnowledgeGraphSnapshotRelation `json:"relations,omitempty"`
 	Completeness []float64                         `json:"completeness,omitempty"`
 	Mastery      []float64                         `json:"mastery,omitempty"`

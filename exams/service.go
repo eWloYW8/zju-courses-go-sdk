@@ -24,25 +24,25 @@ type Service struct {
 // --- Exam CRUD ---
 
 // GetExam returns detailed information about an exam.
-func (s *Service) GetExam(ctx context.Context, examID int) (*model.Exam, error) {
+func (s *Service) GetExam(ctx context.Context, examID int) (*Exam, error) {
 	u := fmt.Sprintf("/api/exams/%d", examID)
-	result := new(model.Exam)
+	result := new(Exam)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // CreateExam creates a new exam.
-func (s *Service) CreateExam(ctx context.Context, courseID int, exam interface{}) (*model.Exam, error) {
+func (s *Service) CreateExam(ctx context.Context, courseID int, exam interface{}) (*Exam, error) {
 	u := fmt.Sprintf("/api/exams/%d", courseID)
-	result := new(model.Exam)
+	result := new(Exam)
 	_, err := s.client.Post(ctx, u, exam, result)
 	return result, err
 }
 
 // UpdateExam updates an exam.
-func (s *Service) UpdateExam(ctx context.Context, examID int, exam interface{}) (*model.Exam, error) {
+func (s *Service) UpdateExam(ctx context.Context, examID int, exam interface{}) (*Exam, error) {
 	u := fmt.Sprintf("/api/exams/%d", examID)
-	result := new(model.Exam)
+	result := new(Exam)
 	_, err := s.client.Put(ctx, u, exam, result)
 	return result, err
 }
@@ -98,25 +98,25 @@ func (s *Service) UpdateExamScore(ctx context.Context, scoreID int, body interfa
 // --- Classroom / In-class Quiz ---
 
 // GetClassroom returns a classroom quiz.
-func (s *Service) GetClassroom(ctx context.Context, classroomID int) (*model.Classroom, error) {
+func (s *Service) GetClassroom(ctx context.Context, classroomID int) (*Classroom, error) {
 	u := fmt.Sprintf("/api/classrooms/%d", classroomID)
-	result := new(model.Classroom)
+	result := new(Classroom)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // CreateClassroom creates a new classroom quiz.
-func (s *Service) CreateClassroom(ctx context.Context, courseID int, classroom interface{}) (*model.Classroom, error) {
+func (s *Service) CreateClassroom(ctx context.Context, courseID int, classroom interface{}) (*Classroom, error) {
 	u := fmt.Sprintf("/api/classroom-exams/%d", courseID)
-	result := new(model.Classroom)
+	result := new(Classroom)
 	_, err := s.client.Post(ctx, u, classroom, result)
 	return result, err
 }
 
 // UpdateClassroom updates a classroom quiz.
-func (s *Service) UpdateClassroom(ctx context.Context, classroomID int, classroom interface{}) (*model.Classroom, error) {
+func (s *Service) UpdateClassroom(ctx context.Context, classroomID int, classroom interface{}) (*Classroom, error) {
 	u := fmt.Sprintf("/api/classrooms/%d", classroomID)
-	result := new(model.Classroom)
+	result := new(Classroom)
 	_, err := s.client.Put(ctx, u, classroom, result)
 	return result, err
 }
@@ -193,9 +193,9 @@ func (s *Service) BatchDeleteClassroomSubjects(ctx context.Context, classroomID 
 // --- Courseware Quiz ---
 
 // ListCoursewareQuizzes returns quizzes for a courseware activity.
-func (s *Service) ListCoursewareQuizzes(ctx context.Context, activityID int) ([]*model.CoursewareQuiz, error) {
+func (s *Service) ListCoursewareQuizzes(ctx context.Context, activityID int) ([]*CoursewareQuiz, error) {
 	u := fmt.Sprintf("/api/courseware-quiz/activity/%d/quizzes", activityID)
-	var result []*model.CoursewareQuiz
+	var result []*CoursewareQuiz
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
@@ -329,21 +329,21 @@ func (s *Service) CreateQuestionnaireSubjectLib(ctx context.Context, body interf
 }
 
 // GetSubject returns a specific subject/question.
-func (s *Service) GetSubject(ctx context.Context, subjectID int) (*model.ExamSubject, error) {
+func (s *Service) GetSubject(ctx context.Context, subjectID int) (*ExamSubject, error) {
 	u := fmt.Sprintf("/api/subjects/%d", subjectID)
-	result := new(model.ExamSubject)
+	result := new(ExamSubject)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // SearchSubjectsInLib returns subjects in a subject library filtered by keyword/type.
-func (s *Service) SearchSubjectsInLib(ctx context.Context, libID int, keyword, subjectType string) ([]*model.ExamSubject, error) {
+func (s *Service) SearchSubjectsInLib(ctx context.Context, libID int, keyword, subjectType string) ([]*ExamSubject, error) {
 	u := fmt.Sprintf("/api/subject-libs/%d?keyword=%s", libID, url.QueryEscape(keyword))
 	if subjectType != "" {
 		u += "&subject_type=" + url.QueryEscape(subjectType)
 	}
 	var result struct {
-		Subjects []*model.ExamSubject `json:"subjects"`
+		Subjects []*ExamSubject `json:"subjects"`
 	}
 	_, err := s.client.Get(ctx, u, &result)
 	return result.Subjects, err

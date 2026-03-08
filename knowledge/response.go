@@ -3,7 +3,7 @@ package knowledge
 import "github.com/eWloYW8/zju-courses-go-sdk/model"
 
 type KnowledgeNodesResponse struct {
-	Items []*model.KnowledgeNode `json:"items"`
+	Items []*KnowledgeNode `json:"items"`
 }
 
 type KnowledgeNodeCapturesResponse struct {

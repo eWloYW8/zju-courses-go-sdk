@@ -271,3 +271,12 @@ type BlueprintSubItem struct {
 	CourseID int `json:"course_id"`
 	Count    int `json:"count"`
 }
+
+// CustomScoreItem represents a custom score item for course grading.
+type CustomScoreItem struct {
+	ID       int     `json:"id"`
+	Name     string  `json:"name,omitempty"`
+	CourseID int     `json:"course_id,omitempty"`
+	Weight   float64 `json:"weight,omitempty"`
+	Sort     int     `json:"sort,omitempty"`
+}

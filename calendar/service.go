@@ -30,24 +30,24 @@ func (s *Service) ListCalendarEvents(ctx context.Context, params map[string]stri
 }
 
 // GetCalendarEvent returns a specific calendar event.
-func (s *Service) GetCalendarEvent(ctx context.Context, eventID int) (*model.CalendarEvent, error) {
+func (s *Service) GetCalendarEvent(ctx context.Context, eventID int) (*CalendarEvent, error) {
 	u := fmt.Sprintf("/api/calendar-events/%d", eventID)
-	result := new(model.CalendarEvent)
+	result := new(CalendarEvent)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // CreateCalendarEvent creates a new calendar event.
-func (s *Service) CreateCalendarEvent(ctx context.Context, body interface{}) (*model.CalendarEvent, error) {
-	result := new(model.CalendarEvent)
+func (s *Service) CreateCalendarEvent(ctx context.Context, body interface{}) (*CalendarEvent, error) {
+	result := new(CalendarEvent)
 	_, err := s.client.Post(ctx, "/api/calendar-events", body, result)
 	return result, err
 }
 
 // UpdateCalendarEvent updates a calendar event.
-func (s *Service) UpdateCalendarEvent(ctx context.Context, eventID int, body interface{}) (*model.CalendarEvent, error) {
+func (s *Service) UpdateCalendarEvent(ctx context.Context, eventID int, body interface{}) (*CalendarEvent, error) {
 	u := fmt.Sprintf("/api/calendar-events/%d", eventID)
-	result := new(model.CalendarEvent)
+	result := new(CalendarEvent)
 	_, err := s.client.Put(ctx, u, body, result)
 	return result, err
 }
@@ -85,24 +85,24 @@ func (s *Service) ListTimetables(ctx context.Context, params map[string]string) 
 }
 
 // GetTimetable returns a specific timetable.
-func (s *Service) GetTimetable(ctx context.Context, timetableID int) (*model.CalendarTimetable, error) {
+func (s *Service) GetTimetable(ctx context.Context, timetableID int) (*CalendarTimetable, error) {
 	u := fmt.Sprintf("/api/calendar-timetables/%d", timetableID)
-	result := new(model.CalendarTimetable)
+	result := new(CalendarTimetable)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // CreateTimetable creates a new timetable entry.
-func (s *Service) CreateTimetable(ctx context.Context, body interface{}) (*model.CalendarTimetable, error) {
-	result := new(model.CalendarTimetable)
+func (s *Service) CreateTimetable(ctx context.Context, body interface{}) (*CalendarTimetable, error) {
+	result := new(CalendarTimetable)
 	_, err := s.client.Post(ctx, "/api/calendar-timetables", body, result)
 	return result, err
 }
 
 // UpdateTimetable updates a timetable entry.
-func (s *Service) UpdateTimetable(ctx context.Context, timetableID int, body interface{}) (*model.CalendarTimetable, error) {
+func (s *Service) UpdateTimetable(ctx context.Context, timetableID int, body interface{}) (*CalendarTimetable, error) {
 	u := fmt.Sprintf("/api/calendar-timetables/%d", timetableID)
-	result := new(model.CalendarTimetable)
+	result := new(CalendarTimetable)
 	_, err := s.client.Put(ctx, u, body, result)
 	return result, err
 }

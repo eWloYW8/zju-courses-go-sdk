@@ -22,23 +22,23 @@ type Service struct {
 // --- Organization ---
 
 // GetGlobalConfig returns the organization's global configuration.
-func (s *Service) GetGlobalConfig(ctx context.Context) (*model.GlobalConfig, error) {
-	result := new(model.GlobalConfig)
+func (s *Service) GetGlobalConfig(ctx context.Context) (*GlobalConfig, error) {
+	result := new(GlobalConfig)
 	_, err := s.client.Get(ctx, "/org/global-config", result)
 	return result, err
 }
 
 // GetConfig returns the file format configuration.
-func (s *Service) GetConfig(ctx context.Context) (*model.Config, error) {
-	result := new(model.Config)
+func (s *Service) GetConfig(ctx context.Context) (*Config, error) {
+	result := new(Config)
 	_, err := s.client.Get(ctx, "/api/config?no-intercept=true", result)
 	return result, err
 }
 
 // GetLangSettings returns language settings for an organization.
-func (s *Service) GetLangSettings(ctx context.Context, orgID int) (*model.LangSettingsResponse, error) {
+func (s *Service) GetLangSettings(ctx context.Context, orgID int) (*LangSettingsResponse, error) {
 	u := fmt.Sprintf("/api/orgs/%d/lang-settings", orgID)
-	result := new(model.LangSettingsResponse)
+	result := new(LangSettingsResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
@@ -156,8 +156,8 @@ func (s *Service) ListGrades(ctx context.Context, params map[string]string) (*Gr
 // --- Outline Settings ---
 
 // GetOutlineSetting returns outline setting options.
-func (s *Service) GetOutlineSetting(ctx context.Context) (*model.OutlineSettingResponse, error) {
-	result := new(model.OutlineSettingResponse)
+func (s *Service) GetOutlineSetting(ctx context.Context) (*OutlineSettingResponse, error) {
+	result := new(OutlineSettingResponse)
 	_, err := s.client.Get(ctx, "/api/outline-setting", result)
 	return result, err
 }

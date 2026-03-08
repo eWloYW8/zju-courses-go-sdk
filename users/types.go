@@ -2,7 +2,19 @@ package users
 
 import "github.com/eWloYW8/zju-courses-go-sdk/model"
 
-type UserProfile = model.UserProfile
+// UserProfile represents a user's profile information.
+type UserProfile struct {
+	ID             int               `json:"id"`
+	Name           string            `json:"name"`
+	Email          string            `json:"email"`
+	Nickname       *string           `json:"nickname"`
+	UserNo         string            `json:"user_no"`
+	AvatarSmallURL string            `json:"avatar_small_url"`
+	AvatarBigURL   string            `json:"avatar_big_url"`
+	Department     *model.Department `json:"department"`
+	Org            *model.Org        `json:"org"`
+	Language       string            `json:"language,omitempty"`
+}
 
 type AcademicYear = model.AcademicYear
 
@@ -18,7 +30,15 @@ type Upload = model.Upload
 
 type Course = model.Course
 
-type SignIn = model.SignIn
+// SignIn represents a sign-in session for a course.
+type SignIn struct {
+	ID        int    `json:"id"`
+	CourseID  int    `json:"course_id,omitempty"`
+	Status    string `json:"status,omitempty"`
+	StartTime string `json:"start_time,omitempty"`
+	EndTime   string `json:"end_time,omitempty"`
+	Type      string `json:"type,omitempty"`
+}
 
 type UserLink struct {
 	ID   int    `json:"id"`

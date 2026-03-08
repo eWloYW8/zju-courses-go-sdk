@@ -56,7 +56,7 @@ type ActivityReadsForUserResponse struct {
 }
 
 type CourseCustomScoreItemsResponse struct {
-	CustomScoreItems []*model.CustomScoreItem `json:"custom_score_items"`
+	CustomScoreItems []*CustomScoreItem `json:"custom_score_items"`
 }
 
 type EntryRecordResponse map[string]any
