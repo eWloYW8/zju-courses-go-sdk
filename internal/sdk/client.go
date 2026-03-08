@@ -82,6 +82,10 @@ func (c *Client) BaseURL() *url.URL {
 	return c.baseURL
 }
 
+func (c *Client) HTTPClient() *http.Client {
+	return c.httpClient
+}
+
 func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body interface{}) (*http.Request, error) {
 	if !strings.HasPrefix(urlStr, "http") {
 		u, err := c.baseURL.Parse(urlStr)
