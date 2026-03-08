@@ -466,6 +466,44 @@ func (s *Service) GenerateRubric(ctx context.Context, body interface{}) (json.Ra
 	return result, err
 }
 
+// --- Make-up Exams ---
+
+// MakeUpExam creates a make-up exam record.
+func (s *Service) MakeUpExam(ctx context.Context, body MakeUpExamRequest) error {
+	_, err := s.client.Post(ctx, "/api/make-up-exams", body, nil)
+	return err
+}
+
+// MakeupExam creates a makeup exam (alternate endpoint).
+func (s *Service) MakeupExam(ctx context.Context, body MakeupExamRequest) error {
+	_, err := s.client.Post(ctx, "/api/makeup-exams", body, nil)
+	return err
+}
+
+// ListCourseExams returns all exams for a course.
+func (s *Service) ListCourseExams(ctx context.Context, courseID int) (*CourseExamsResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/exams", courseID)
+	result := new(CourseExamsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListCourseClassrooms returns classroom activities for a course.
+func (s *Service) ListCourseClassrooms(ctx context.Context, courseID int) (*CourseClassroomListResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/classroom-list", courseID)
+	result := new(CourseClassroomListResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListSubmittedExams returns IDs of submitted exams for a course.
+func (s *Service) ListSubmittedExams(ctx context.Context, courseID int) (*SubmittedExamsResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/submitted-exams", courseID)
+	result := new(SubmittedExamsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 func addQueryParams(urlStr string, params map[string]string) string {
 	return sdk.AddQueryParams(urlStr, params)
 }

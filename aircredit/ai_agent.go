@@ -46,36 +46,3 @@ func (s *Service) UploadAIScreenShot(ctx context.Context, body interface{}) (jso
 	_, err := s.client.Post(ctx, "/api/uploads/air-screen-shot", body, &result)
 	return result, err
 }
-
-// --- Knowledge Nodes ---
-
-// CheckKnowledgeNodesExist checks if knowledge nodes exist for a course.
-func (s *Service) CheckKnowledgeNodesExist(ctx context.Context, courseID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/course/%d/knowledge-nodes/exists", courseID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
-	return result, err
-}
-
-// SyncKnowledgeNodesWithAI syncs knowledge nodes with AI for a course.
-func (s *Service) SyncKnowledgeNodesWithAI(ctx context.Context, courseID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/course/%d/knowledge-nodes/sync-air", courseID)
-	var result json.RawMessage
-	_, err := s.client.Post(ctx, u, nil, &result)
-	return result, err
-}
-
-// GetKnowledgeGraphSettings returns knowledge graph settings.
-func (s *Service) GetKnowledgeGraphSettings(ctx context.Context, graphID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/knowledge-graph/%d/settings", graphID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
-	return result, err
-}
-
-// GetCurrentSemesterCourses returns courses for the current semester.
-func (s *Service) GetCurrentSemesterCourses(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/current-semester-courses", &result)
-	return result, err
-}

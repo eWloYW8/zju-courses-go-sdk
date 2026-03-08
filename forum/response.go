@@ -14,3 +14,7 @@ type LatestTopicsResponse struct {
 type ForumScoreResponse struct {
 	ForumScore *ForumScore `json:"forum_score"`
 }
+
+type TopicCategoriesResponse struct {
+	TopicCategories []*TopicCategory `json:"topic_categories"`
+}

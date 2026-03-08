@@ -13,7 +13,7 @@ type Topic struct {
 	TopicType         string                   `json:"topic_type,omitempty"`
 	CreatedAt         string                   `json:"created_at,omitempty"`
 	UpdatedAt         *string                  `json:"updated_at,omitempty"`
-	CreatedBy         *activities.ActivityUser `json:"created_by,omitempty"`
+	CreatedBy         *activities.ActivityUser  `json:"created_by,omitempty"`
 	GroupID           *int                     `json:"group_id,omitempty"`
 	TopicCategoryID   int                      `json:"topic_category_id,omitempty"`
 	InCommonCategory  bool                     `json:"in_common_category,omitempty"`
@@ -58,8 +58,8 @@ type Reply struct {
 	Content   string                   `json:"content"`
 	CreatedAt string                   `json:"created_at"`
 	UpdatedAt *string                  `json:"updated_at,omitempty"`
-	User      *activities.ActivityUser `json:"user,omitempty"`
-	CreatedBy *activities.ActivityUser `json:"created_by,omitempty"`
+	User      *activities.ActivityUser  `json:"user,omitempty"`
+	CreatedBy *activities.ActivityUser  `json:"created_by,omitempty"`
 	ParentID  *int                     `json:"parent_id,omitempty"`
 	TopicID   int                      `json:"topic_id,omitempty"`
 	LikeCount int                      `json:"like_count,omitempty"`
@@ -79,3 +79,9 @@ type ForumScoresResponse map[string]any
 type CourseForumScoresResponse map[string]any
 
 type CategoryRepliedResponse map[string]any
+
+type TopicCategory struct {
+	ID           int    `json:"id"`
+	Title        string `json:"title,omitempty"`
+	ReferrerType string `json:"referrer_type,omitempty"`
+}

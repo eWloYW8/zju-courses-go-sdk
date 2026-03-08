@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"net/url"
 
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/model"
 )
 

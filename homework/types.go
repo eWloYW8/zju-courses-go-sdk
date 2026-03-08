@@ -16,20 +16,20 @@ type HomeworkScore struct {
 }
 
 type Submission struct {
-	ID          int             `json:"id"`
-	ActivityID  int             `json:"activity_id,omitempty"`
-	StudentID   int             `json:"student_id,omitempty"`
-	GroupID     *int            `json:"group_id,omitempty"`
-	Content     string          `json:"content,omitempty"`
-	Score       *float64        `json:"score,omitempty"`
-	FinalScore  *float64        `json:"final_score,omitempty"`
-	IsLate      bool            `json:"is_late,omitempty"`
-	IsRecommend bool            `json:"is_recommend,omitempty"`
-	SubmittedAt string          `json:"submitted_at,omitempty"`
-	CreatedAt   string          `json:"created_at,omitempty"`
-	UpdatedAt   string          `json:"updated_at,omitempty"`
-	Uploads     []*model.Upload `json:"uploads,omitempty"`
-	Data        map[string]any  `json:"data,omitempty"`
+	ID          int                     `json:"id"`
+	ActivityID  int                     `json:"activity_id,omitempty"`
+	StudentID   int                     `json:"student_id,omitempty"`
+	GroupID     *int                    `json:"group_id,omitempty"`
+	Content     string                  `json:"content,omitempty"`
+	Score       *float64                `json:"score,omitempty"`
+	FinalScore  *float64                `json:"final_score,omitempty"`
+	IsLate      bool                    `json:"is_late,omitempty"`
+	IsRecommend bool                    `json:"is_recommend,omitempty"`
+	SubmittedAt string                  `json:"submitted_at,omitempty"`
+	CreatedAt   string                  `json:"created_at,omitempty"`
+	UpdatedAt   string                  `json:"updated_at,omitempty"`
+	Uploads     []*model.Upload         `json:"uploads,omitempty"`
+	Data        map[string]any          `json:"data,omitempty"`
 	User        *activities.ActivityUser `json:"user,omitempty"`
 }
 

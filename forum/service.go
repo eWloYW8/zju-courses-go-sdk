@@ -176,6 +176,14 @@ func (s *Service) UnlikeReply(ctx context.Context, replyID int) error {
 	return err
 }
 
+// ListTopicCategories returns topic categories for a course.
+func (s *Service) ListTopicCategories(ctx context.Context, courseID int) (*TopicCategoriesResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/topic-categories", courseID)
+	result := new(TopicCategoriesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 func addListOptions(urlStr string, opts *model.ListOptions) string {
 	if opts == nil {
 		return urlStr

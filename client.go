@@ -9,12 +9,20 @@ import (
 	"github.com/eWloYW8/zju-courses-go-sdk/calendar"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses"
 	"github.com/eWloYW8/zju-courses-go-sdk/exams"
+	"github.com/eWloYW8/zju-courses-go-sdk/feedback"
 	"github.com/eWloYW8/zju-courses-go-sdk/forum"
+	"github.com/eWloYW8/zju-courses-go-sdk/groups"
 	"github.com/eWloYW8/zju-courses-go-sdk/homework"
+	"github.com/eWloYW8/zju-courses-go-sdk/interactions"
 	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
+	"github.com/eWloYW8/zju-courses-go-sdk/knowledge"
+	"github.com/eWloYW8/zju-courses-go-sdk/meetings"
 	"github.com/eWloYW8/zju-courses-go-sdk/notifications"
+	"github.com/eWloYW8/zju-courses-go-sdk/others"
 	"github.com/eWloYW8/zju-courses-go-sdk/resources"
+	"github.com/eWloYW8/zju-courses-go-sdk/rollcall"
 	"github.com/eWloYW8/zju-courses-go-sdk/statistics"
+	"github.com/eWloYW8/zju-courses-go-sdk/syllabus"
 	"github.com/eWloYW8/zju-courses-go-sdk/uploads"
 	"github.com/eWloYW8/zju-courses-go-sdk/users"
 )
@@ -30,13 +38,21 @@ type Client struct {
 	Forum         *forum.Service
 	Exams         *exams.Service
 	Uploads       *uploads.Service
-	User          *users.Service
+	Users         *users.Service
 	Notifications *notifications.Service
 	Calendar      *calendar.Service
 	Statistics    *statistics.Service
 	Admin         *admin.Service
 	AirCredit     *aircredit.Service
 	Resources     *resources.Service
+	Knowledge     *knowledge.Service
+	Meetings      *meetings.Service
+	Groups        *groups.Service
+	Rollcall      *rollcall.Service
+	Interactions  *interactions.Service
+	Feedback      *feedback.Service
+	Syllabus      *syllabus.Service
+	Others        *others.Service
 }
 
 type ClientOption = sdk.ClientOption
@@ -67,13 +83,21 @@ func NewClient(opts ...ClientOption) *Client {
 	c.Forum = forum.New(core)
 	c.Exams = exams.New(core)
 	c.Uploads = uploads.New(core)
-	c.User = users.New(core)
+	c.Users = users.New(core)
 	c.Notifications = notifications.New(core)
 	c.Calendar = calendar.New(core)
 	c.Statistics = statistics.New(core)
 	c.Admin = admin.New(core)
 	c.AirCredit = aircredit.New(core)
 	c.Resources = resources.New(core)
+	c.Knowledge = knowledge.New(core)
+	c.Meetings = meetings.New(core)
+	c.Groups = groups.New(core)
+	c.Rollcall = rollcall.New(core)
+	c.Interactions = interactions.New(core)
+	c.Feedback = feedback.New(core)
+	c.Syllabus = syllabus.New(core)
+	c.Others = others.New(core)
 
 	return c
 }

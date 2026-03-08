@@ -143,68 +143,6 @@ func (s *Service) GetActivityPublishSetting(ctx context.Context, courseID int) (
 	return result, err
 }
 
-// --- Scores ---
-
-// ListHomeworkScores returns homework score entries for a course.
-func (s *Service) ListHomeworkScores(ctx context.Context, courseID int) (*HomeworkScoresResponse, error) {
-	u := fmt.Sprintf("/api/course/%d/homework-scores", courseID)
-	result := new(HomeworkScoresResponse)
-	_, err := s.client.Get(ctx, u, result)
-	return result, err
-}
-
-// GetHomeworkSubmissionStatus returns homework submission statuses for a course.
-func (s *Service) GetHomeworkSubmissionStatus(ctx context.Context, courseID int) (*HomeworkSubmissionStatusResponse, error) {
-	u := fmt.Sprintf("/api/course/%d/homework/submission-status", courseID)
-	result := new(HomeworkSubmissionStatusResponse)
-	_, err := s.client.Get(ctx, u, result)
-	return result, err
-}
-
-// ListExamScores returns exam scores for a course.
-func (s *Service) ListExamScores(ctx context.Context, courseID int) (*ExamScoresResponse, error) {
-	u := fmt.Sprintf("/api/courses/%d/exam-scores", courseID)
-	result := new(ExamScoresResponse)
-	_, err := s.client.Get(ctx, u, result)
-	return result, err
-}
-
-// --- Exams & Classroom ---
-
-// ListExams returns all exams for a course.
-func (s *Service) ListExams(ctx context.Context, courseID int) (*ExamsResponse, error) {
-	u := fmt.Sprintf("/api/courses/%d/exams", courseID)
-	result := new(ExamsResponse)
-	_, err := s.client.Get(ctx, u, result)
-	return result, err
-}
-
-// ListClassrooms returns classroom activities for a course.
-func (s *Service) ListClassrooms(ctx context.Context, courseID int) (*ClassroomListResponse, error) {
-	u := fmt.Sprintf("/api/courses/%d/classroom-list", courseID)
-	result := new(ClassroomListResponse)
-	_, err := s.client.Get(ctx, u, result)
-	return result, err
-}
-
-// ListSubmittedExams returns IDs of submitted exams.
-func (s *Service) ListSubmittedExams(ctx context.Context, courseID int) (*SubmittedExamsResponse, error) {
-	u := fmt.Sprintf("/api/courses/%d/submitted-exams", courseID)
-	result := new(SubmittedExamsResponse)
-	_, err := s.client.Get(ctx, u, result)
-	return result, err
-}
-
-// --- Forum ---
-
-// ListTopicCategories returns topic categories for a course.
-func (s *Service) ListTopicCategories(ctx context.Context, courseID int) (*TopicCategoriesResponse, error) {
-	u := fmt.Sprintf("/api/courses/%d/topic-categories", courseID)
-	result := new(TopicCategoriesResponse)
-	_, err := s.client.Get(ctx, u, result)
-	return result, err
-}
-
 // --- Other ---
 
 // GetUsersSmallAvatars returns small avatar URLs for all users in a course.
@@ -215,26 +153,10 @@ func (s *Service) GetUsersSmallAvatars(ctx context.Context, courseID int) (*User
 	return result, err
 }
 
-// ListInteractions returns interactions for a course.
-func (s *Service) ListInteractions(ctx context.Context, courseID int) (*InteractionsResponse, error) {
-	u := fmt.Sprintf("/api/courses/%d/interactions", courseID)
-	result := new(InteractionsResponse)
-	_, err := s.client.Get(ctx, u, result)
-	return result, err
-}
-
 // ListLiveRecords returns live records for a course.
 func (s *Service) ListLiveRecords(ctx context.Context, courseID int) (*LiveRecordsResponse, error) {
 	u := fmt.Sprintf("/api/courses/%d/live-record", courseID)
 	result := new(LiveRecordsResponse)
-	_, err := s.client.Get(ctx, u, result)
-	return result, err
-}
-
-// ListRollcalls returns rollcall records for a course.
-func (s *Service) ListRollcalls(ctx context.Context, courseID int) (*RollcallsResponse, error) {
-	u := fmt.Sprintf("/api/courses/%d/modules/rollcalls", courseID)
-	result := new(RollcallsResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
@@ -345,14 +267,6 @@ func (s *Service) SyncFromURP(ctx context.Context, courseIDs []int) error {
 	return err
 }
 
-// GetBlueprintSubItems returns blueprint sub-items for a specific entity.
-func (s *Service) GetBlueprintSubItems(ctx context.Context, courseID int, params map[string]string) (json.RawMessage, error) {
-	u := addQueryParams(fmt.Sprintf("/api/blueprint/%d/sub-items", courseID), params)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
-	return result, err
-}
-
 // GetCourseCount returns the total number of courses matching filters.
 func (s *Service) GetCourseCount(ctx context.Context, params map[string]string) (json.RawMessage, error) {
 	u := addQueryParams("/api/courses/count", params)
@@ -365,6 +279,16 @@ func (s *Service) GetCourseCount(ctx context.Context, params map[string]string) 
 func (s *Service) GetSettings(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, "/api/courses/settings", &result)
+	return result, err
+}
+
+// --- Blueprint ---
+
+// GetBlueprintSubItems returns blueprint sub-items for a specific entity.
+func (s *Service) GetBlueprintSubItems(ctx context.Context, courseID int, params map[string]string) (json.RawMessage, error) {
+	u := addQueryParams(fmt.Sprintf("/api/blueprint/%d/sub-items", courseID), params)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
@@ -383,6 +307,151 @@ func (s *Service) SyncBlueprint(ctx context.Context, courseID int, body interfac
 	_, err := s.client.Post(ctx, u, body, &result)
 	return result, err
 }
+
+// ListBlueprintSubCourses returns blueprint sub courses.
+func (s *Service) ListBlueprintSubCourses(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/blueprint/sub-courses/%d", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// DeleteBlueprint deletes a blueprint course mapping/configuration.
+func (s *Service) DeleteBlueprint(ctx context.Context, courseID int) error {
+	u := fmt.Sprintf("/api/blueprint/%d", courseID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// CancelBlueprintActivitySync cancels blueprint sync for an activity.
+func (s *Service) CancelBlueprintActivitySync(ctx context.Context, courseID, activityID int, body interface{}) error {
+	u := fmt.Sprintf("/api/blueprint/%d/activities/%d/cancel-sync", courseID, activityID)
+	_, err := s.client.Delete(ctx, u, body)
+	return err
+}
+
+// GetBlueprintSubmittedInfo returns blueprint submitted sync info for a target object.
+func (s *Service) GetBlueprintSubmittedInfo(ctx context.Context, courseID int, resourceType string, resourceID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/blueprint/%d/%s/%d/submitted-info", courseID, resourceType, resourceID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// SyncBlueprintSubject syncs a blueprint subject item.
+func (s *Service) SyncBlueprintSubject(ctx context.Context, courseID int, resourceType string, resourceID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/blueprint/%d/%s/%d/sync-subject", courseID, resourceType, resourceID)
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, nil, &result)
+	return result, err
+}
+
+// --- Danmu (Bullet Screen) ---
+
+// GetDanmu returns danmu for a course.
+func (s *Service) GetDanmu(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/courses/danmu/%d", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// --- Statistic Resource Audit ---
+
+// GetStatisticResourceAudit returns statistic resource audit.
+func (s *Service) GetStatisticResourceAudit(ctx context.Context) (json.RawMessage, error) {
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, "/api/courses/statistic/resource-audit", &result)
+	return result, err
+}
+
+// --- TPDOE ---
+
+// GetTPDOEStatStudents returns TPDOE student statistics.
+func (s *Service) GetTPDOEStatStudents(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/courses/tpdoe/stat-students?course_id=%d", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// --- Inspect Child ---
+
+// InspectChild inspects a child course.
+func (s *Service) InspectChild(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/courses/inspect-child/%d", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// --- Course Classifications ---
+
+// ListCourseClassifications returns course classifications.
+func (s *Service) ListCourseClassifications(ctx context.Context) (json.RawMessage, error) {
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, "/api/course-classifications", &result)
+	return result, err
+}
+
+// --- Curriculum Classifications ---
+
+// ListCurriculumClassifications returns curriculum classifications.
+func (s *Service) ListCurriculumClassifications(ctx context.Context) (json.RawMessage, error) {
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, "/api/curriculum-classifications", &result)
+	return result, err
+}
+
+// --- Sign In ---
+
+// GetCourseSignIn returns the sign-in for a course.
+func (s *Service) GetCourseSignIn(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/courses/%d/sign-in", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// --- Current Semester Courses ---
+
+// GetCurrentSemesterCourses returns courses for the current semester.
+func (s *Service) GetCurrentSemesterCourses(ctx context.Context) (json.RawMessage, error) {
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, "/api/current-semester-courses", &result)
+	return result, err
+}
+
+// --- Tencent Meeting Activities ---
+
+// ListTencentMeetingActivities returns Tencent meeting activities for a course.
+func (s *Service) ListTencentMeetingActivities(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/courses/tencent-meeting/activities?course_id=%d", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// --- Lecture Live Activity ---
+
+// GetLectureLiveActivity returns a lecture live activity for a course.
+func (s *Service) GetLectureLiveActivity(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/courses/lecture-live-activity/%d", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// --- Preview ---
+
+// CancelPreview cancels a course preview.
+func (s *Service) CancelPreview(ctx context.Context, courseID int) error {
+	u := fmt.Sprintf("/api/courses/%d/preview", courseID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// --- Helpers ---
 
 func addListOptions(urlStr string, opts *model.ListOptions) string {
 	if opts == nil {

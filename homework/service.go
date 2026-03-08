@@ -162,15 +162,3 @@ func (s *Service) DownloadHomeworkZip(ctx context.Context, activityID int) (Home
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
-
-// MakeUpExam creates a make-up exam record.
-func (s *Service) MakeUpExam(ctx context.Context, body MakeUpExamRequest) error {
-	_, err := s.client.Post(ctx, "/api/make-up-exams", body, nil)
-	return err
-}
-
-// MakeupExam creates a makeup exam (alternate endpoint).
-func (s *Service) MakeupExam(ctx context.Context, body MakeupExamRequest) error {
-	_, err := s.client.Post(ctx, "/api/makeup-exams", body, nil)
-	return err
-}

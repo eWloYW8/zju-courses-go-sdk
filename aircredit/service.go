@@ -9,10 +9,6 @@ import (
 	"github.com/eWloYW8/zju-courses-go-sdk/model"
 )
 
-// AIAbilityResponse represents the response from the AI ability check.
-type AIAbilityResponse struct {
-	HasAnyCourseAIAbility bool `json:"has_any_course_ai_ability"`
-}
 
 // Service handles AI credit-related API operations.
 

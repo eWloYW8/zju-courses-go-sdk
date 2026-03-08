@@ -30,7 +30,3 @@ type ScoreSubmissionRequest struct {
 type RecommendSubmissionRequest struct {
 	SubmissionIDs []int `json:"submission_ids"`
 }
-
-type MakeUpExamRequest map[string]any
-
-type MakeupExamRequest map[string]any

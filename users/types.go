@@ -101,4 +101,3 @@ type CoursesInfoStatusResponse struct {
 }
 
 type OrgSummaryResponse map[string]any
-

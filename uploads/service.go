@@ -372,6 +372,16 @@ func (s *Service) DownloadDuplicateReport(ctx context.Context) (json.RawMessage,
 	return result, err
 }
 
+// GetFileStatus returns the processing status of an upload file.
+func (s *Service) GetFileStatus(ctx context.Context, uploadID int) (string, error) {
+	u := fmt.Sprintf("/api/uploads/%d", uploadID)
+	var result struct {
+		Status string `json:"status"`
+	}
+	_, err := s.client.Get(ctx, u, &result)
+	return result.Status, err
+}
+
 func addListOptions(urlStr string, opts *model.ListOptions) string {
 	if opts == nil {
 		return urlStr

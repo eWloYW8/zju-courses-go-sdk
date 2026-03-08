@@ -14,3 +14,7 @@ type BatchCopySubjectLibsRequest struct {
 type CoursewareQuizSubjectsRequest struct {
 	Subjects any `json:"subjects"`
 }
+
+type MakeUpExamRequest map[string]any
+
+type MakeupExamRequest map[string]any
