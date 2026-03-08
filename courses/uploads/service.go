@@ -201,6 +201,14 @@ func (s *Service) GetUploadPDFInfo(ctx context.Context, uploadID int) (json.RawM
 	return result, err
 }
 
+// GetUploadPDFInfoDetail returns typed PDF page information for an upload.
+func (s *Service) GetUploadPDFInfoDetail(ctx context.Context, uploadID int) (*UploadPDFInfo, error) {
+	u := fmt.Sprintf("/api/uploads/%d/pdf-info?preview=true", uploadID)
+	result := new(UploadPDFInfo)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // GetUploadAudioPreview returns audio preview metadata for an upload.
 func (s *Service) GetUploadAudioPreview(ctx context.Context, uploadID int) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/uploads/audio/%d?preview=true", uploadID)

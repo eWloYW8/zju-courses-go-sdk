@@ -1,6 +1,8 @@
 package courses
 
 import (
+	"encoding/json"
+
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/activities"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
 )
@@ -18,6 +20,34 @@ type ModulesResponse struct {
 
 type EnrollmentsResponse struct {
 	Enrollments []*Enrollment `json:"enrollments"`
+}
+
+type CourseInstructorsResponse struct {
+	Instructors []*model.User `json:"instructors"`
+}
+
+type CourseHostsResponse struct {
+	Hosts []*model.User `json:"hosts"`
+}
+
+type CourseGroupUsersResponse struct {
+	Result []*model.User `json:"result"`
+}
+
+type AvailableUsersResponse struct {
+	Users []*model.User `json:"users"`
+}
+
+type StudentsResponse struct {
+	Students []*model.User `json:"students"`
+}
+
+type SectionsResponse struct {
+	Sections []*Section `json:"sections"`
+}
+
+type ScoreItemGroupsResponse struct {
+	Items []*ScoreItemGroup `json:"items"`
 }
 
 type ActivitiesResponse struct {
@@ -75,3 +105,13 @@ type CourseCountResponse map[string]any
 type SettingsResponse map[string]any
 
 type BlueprintSubItemsResultResponse map[string]any
+
+type BlueprintSubmittedInfoResponse struct {
+	UnableSync []*BlueprintSubmittedInfo `json:"unable_sync,omitempty"`
+	NeedSync   []*BlueprintSubmittedInfo `json:"need_sync,omitempty"`
+}
+
+type CourseAuditReferencesResponse struct {
+	AuditReferences []json.RawMessage `json:"audit_references"`
+	model.Pagination
+}

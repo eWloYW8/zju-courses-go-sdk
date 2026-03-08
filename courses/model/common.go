@@ -11,8 +11,8 @@ type User struct {
 	AvatarBigURL      string             `json:"avatar_big_url,omitempty"`
 	PortfolioURL      string             `json:"portfolio_url,omitempty"`
 	Comment           *string            `json:"comment,omitempty"`
-	Grade             *string            `json:"grade,omitempty"`
-	Klass             *string            `json:"klass,omitempty"`
+	Grade             *Grade             `json:"grade,omitempty"`
+	Klass             *Class             `json:"klass,omitempty"`
 	MobilePhone       string             `json:"mobile_phone,omitempty"`
 	Language          string             `json:"language,omitempty"`
 	CreatedAt         string             `json:"created_at,omitempty"`
@@ -25,6 +25,7 @@ type User struct {
 	StorageUsed       int                `json:"storage_used,omitempty"`
 	WebexAuth         bool               `json:"webex_auth,omitempty"`
 	Department        *Department        `json:"department,omitempty"`
+	LearningCenter    *LearningCenter    `json:"learning_center,omitempty"`
 	Org               *OrgDetail         `json:"org,omitempty"`
 	Program           *Program           `json:"program,omitempty"`
 	UserAttributes    *UserAttributes    `json:"user_attributes,omitempty"`
@@ -52,6 +53,7 @@ type UserAttributes struct {
 	NativePlace    *string `json:"native_place"`
 	OccupationType *string `json:"occupation_type"`
 	PortfolioURL   *string `json:"portfolio_url"`
+	Tag            *string `json:"tag"`
 }
 
 // UserPersonas represents user persona wrapper.
@@ -79,14 +81,17 @@ type UserPersonaData struct {
 
 // UserAddress represents a user's address entry.
 type UserAddress struct {
-	ID      int    `json:"id"`
-	Address string `json:"address,omitempty"`
-	Type    string `json:"type,omitempty"`
+	ID       int    `json:"id"`
+	Name     string `json:"name,omitempty"`
+	Address  string `json:"address,omitempty"`
+	PostCode string `json:"post_code,omitempty"`
+	Type     string `json:"type,omitempty"`
 }
 
 // UserAuthExternal represents an external authentication provider link.
 type UserAuthExternal struct {
 	ID       int    `json:"id"`
+	Type     string `json:"type,omitempty"`
 	Provider string `json:"provider,omitempty"`
 	UID      string `json:"uid,omitempty"`
 }
@@ -109,6 +114,12 @@ type Department struct {
 	CreatedUser      *User         `json:"created_user,omitempty"`
 	UpdatedUser      *User         `json:"updated_user,omitempty"`
 	Children         []*Department `json:"departments,omitempty"`
+}
+
+// LearningCenter represents a user's learning center.
+type LearningCenter struct {
+	ID   int    `json:"id"`
+	Name string `json:"name,omitempty"`
 }
 
 // Org represents the organization in brief form.
@@ -241,4 +252,3 @@ type Class struct {
 	DepartmentID int    `json:"department_id,omitempty"`
 	Grade        string `json:"grade,omitempty"`
 }
-

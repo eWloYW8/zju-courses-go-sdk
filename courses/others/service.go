@@ -155,6 +155,14 @@ func (s *Service) ExportQuestionnaireExcel(ctx context.Context, questionnaireID 
 	return result, err
 }
 
+// ExportQuestionnaireCSV exports questionnaire results as CSV.
+func (s *Service) ExportQuestionnaireCSV(ctx context.Context, questionnaireID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/questionnaire/%d/export/csv", questionnaireID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // SortQuestionnaireSubjects sorts questionnaire subjects.
 func (s *Service) SortQuestionnaireSubjects(ctx context.Context, questionnaireID int, body interface{}) error {
 	u := fmt.Sprintf("/api/questionnaire/%d/subject-sort", questionnaireID)
@@ -344,16 +352,17 @@ func (s *Service) GetLessonManagement(ctx context.Context, lessonID int) (json.R
 }
 
 // ListLessonRooms returns lesson rooms.
-func (s *Service) ListLessonRooms(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
+func (s *Service) ListLessonRooms(ctx context.Context) ([]*LessonRoom, error) {
+	var result []*LessonRoom
 	_, err := s.client.Get(ctx, "/api/lesson-rooms", &result)
 	return result, err
 }
 
-// ListRoomLocations returns room locations.
-func (s *Service) ListRoomLocations(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/room-locations", &result)
+// ListRoomLocations returns room locations for a course.
+func (s *Service) ListRoomLocations(ctx context.Context, courseID int) (*RoomLocationsResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/room-locations", courseID)
+	result := new(RoomLocationsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 

@@ -54,6 +54,13 @@ func (s *Service) GetTencentMeeting(ctx context.Context, meetingID int) (json.Ra
 	return result, err
 }
 
+// DeleteTencentSubMeeting deletes a Tencent recurring sub-meeting.
+func (s *Service) DeleteTencentSubMeeting(ctx context.Context, subMeetingID int) error {
+	u := fmt.Sprintf("/api/tencent-meeting/%d", subMeetingID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
 // GetTencentMeetingAuthURL returns the Tencent meeting authorization URL.
 func (s *Service) GetTencentMeetingAuthURL(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
@@ -98,6 +105,22 @@ func (s *Service) GetDingTalkLive(ctx context.Context, liveID int) (json.RawMess
 	u := fmt.Sprintf("/api/dingtalk-lives/%d", liveID)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetZoomSettings returns organization zoom settings.
+func (s *Service) GetZoomSettings(ctx context.Context, orgID int) (*OrgZoomSettingsResponse, error) {
+	u := fmt.Sprintf("/api/orgs/%d/zoom-settings", orgID)
+	result := new(OrgZoomSettingsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetZoomUserInfo returns zoom account dispatch information for a user.
+func (s *Service) GetZoomUserInfo(ctx context.Context, userID int) (*ZoomUserInfoResponse, error) {
+	u := fmt.Sprintf("/api/user/%d/zoom-info", userID)
+	result := new(ZoomUserInfoResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -443,28 +466,29 @@ func (s *Service) DeleteCombineCourse(ctx context.Context, combineID int) error 
 // --- Lesson Rooms & Room Locations ---
 
 // ListLessonRooms returns lesson rooms.
-func (s *Service) ListLessonRooms(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
+func (s *Service) ListLessonRooms(ctx context.Context) ([]*LessonRoom, error) {
+	var result []*LessonRoom
 	_, err := s.client.Get(ctx, "/api/lesson-rooms", &result)
 	return result, err
 }
 
-// ListRoomLocations returns room locations.
-func (s *Service) ListRoomLocations(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/room-locations", &result)
+// ListRoomLocations returns room locations for a course.
+func (s *Service) ListRoomLocations(ctx context.Context, courseID int) (*RoomLocationsResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/room-locations", courseID)
+	result := new(RoomLocationsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // ListEnabledRoomLocations returns room locations that are available for the given time window.
-func (s *Service) ListEnabledRoomLocations(ctx context.Context, orgID int, startTime, endTime string) (json.RawMessage, error) {
+func (s *Service) ListEnabledRoomLocations(ctx context.Context, orgID int, startTime, endTime string) (*RoomLocationsResponse, error) {
 	u := fmt.Sprintf("/api/org/%d/enable-room-locations", orgID)
 	u = addQueryParams(u, map[string]string{
 		"start_time": startTime,
 		"end_time":   endTime,
 	})
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(RoomLocationsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 

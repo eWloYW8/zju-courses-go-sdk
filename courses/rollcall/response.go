@@ -1,7 +1,10 @@
 package rollcall
 
-import "encoding/json"
-
 type CourseRollcallsResponse struct {
-	Rollcalls []json.RawMessage `json:"rollcalls"`
+	Rollcalls []*Rollcall `json:"rollcalls"`
+}
+
+type CreateRollcallResponse struct {
+	ID      int     `json:"id"`
+	Message *string `json:"message,omitempty"`
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/activities"
@@ -44,6 +45,13 @@ func (s *Service) ListMyCoursesWithFilters(ctx context.Context, opts *model.List
 func (s *Service) ListMyCoursesByConditions(ctx context.Context, body *ListMyCoursesRequest) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, "/api/my-courses", body, &result)
+	return result, err
+}
+
+// ListMyCoursesByConditionsTyped returns the current user's courses using the POST-based query with typed results.
+func (s *Service) ListMyCoursesByConditionsTyped(ctx context.Context, body *ListMyCoursesRequest) (*MyCoursesResponse, error) {
+	result := new(MyCoursesResponse)
+	_, err := s.client.Post(ctx, "/api/my-courses", body, result)
 	return result, err
 }
 
@@ -103,33 +111,134 @@ func (s *Service) ListEnrollments(ctx context.Context, courseID int) (*Enrollmen
 
 // GetEnrollmentUser returns enrollment details for a specific user.
 func (s *Service) GetEnrollmentUser(ctx context.Context, courseID, userID int) (*EnrollmentDetail, error) {
-	return s.GetEnrollmentUserWithFields(ctx, courseID, userID, "")
+	return s.GetEnrollmentUserWithParams(ctx, courseID, userID, GetEnrollmentUserParams{})
 }
 
 // GetEnrollmentUserWithFields returns enrollment details using the frontend endpoint shape.
 func (s *Service) GetEnrollmentUserWithFields(ctx context.Context, courseID, userID int, fields string) (*EnrollmentDetail, error) {
-	u := fmt.Sprintf("/api/course/%d/enrollment/%d", courseID, userID)
-	if fields != "" {
-		u = addQueryParams(u, map[string]string{"fields": fields})
+	return s.GetEnrollmentUserWithParams(ctx, courseID, userID, GetEnrollmentUserParams{Fields: fields})
+}
+
+// GetEnrollmentUserWithParams returns enrollment details using the frontend endpoint shape and optional request scope.
+func (s *Service) GetEnrollmentUserWithParams(ctx context.Context, courseID, userID int, params GetEnrollmentUserParams) (*EnrollmentDetail, error) {
+	u := fmt.Sprintf("/api/courses/%d/enrollments/users/%d", courseID, userID)
+	if params.Fields != "" {
+		u = addQueryParams(u, map[string]string{"fields": params.Fields})
 	}
 	result := new(EnrollmentDetail)
-	_, err := s.client.Get(ctx, u, result)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	if params.RequestScope != "" {
+		req.Header.Set("Request-Scope", params.RequestScope)
+	}
+	_, err = s.client.Do(req, result)
 	return result, err
 }
 
-// ListInstructors returns instructors for a course.
+// ListInstructors returns instructor enrollments for a course.
 func (s *Service) ListInstructors(ctx context.Context, courseID int) (*EnrollmentsResponse, error) {
+	return s.ListInstructorEnrollments(ctx, courseID, ListInstructorEnrollmentsParams{})
+}
+
+// ListInstructorEnrollments returns instructor enrollments for a course with optional field selection.
+func (s *Service) ListInstructorEnrollments(ctx context.Context, courseID int, params ListInstructorEnrollmentsParams) (*EnrollmentsResponse, error) {
 	u := fmt.Sprintf("/api/course/%d/instructors", courseID)
+	if params.Fields != "" {
+		u = addQueryParams(u, map[string]string{"fields": params.Fields})
+	}
 	result := new(EnrollmentsResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
+// ListCourseInstructors returns the flattened instructor user list for a course.
+func (s *Service) ListCourseInstructors(ctx context.Context, courseID int) (*CourseInstructorsResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/instructors", courseID)
+	result := new(CourseInstructorsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListEducators returns educators/enrollments for a course using the management endpoint.
+func (s *Service) ListEducators(ctx context.Context, courseID int, fields string) (*EnrollmentsResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/educators", courseID)
+	if fields != "" {
+		u = addQueryParams(u, map[string]string{"fields": fields})
+	}
+	result := new(EnrollmentsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListHosts returns host users for a course.
+func (s *Service) ListHosts(ctx context.Context, courseID int, params ListCourseHostsParams) (*CourseHostsResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/hosts", courseID)
+	if params.Type != "" {
+		u = addQueryParams(u, map[string]string{"type": params.Type})
+	}
+	result := new(CourseHostsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListGroupUsers returns users by group name for a course.
+func (s *Service) ListGroupUsers(ctx context.Context, courseID int, groupName string) (*CourseGroupUsersResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/group-users", courseID)
+	if groupName != "" {
+		u = addQueryParams(u, map[string]string{"group_name": groupName})
+	}
+	result := new(CourseGroupUsersResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListAvailableUsers returns users that can be added to the course teaching team.
+func (s *Service) ListAvailableUsers(ctx context.Context, courseID int, keyword string, withoutStudent bool) (*AvailableUsersResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/available-users", courseID)
+	params := map[string]string{}
+	if keyword != "" {
+		params["conditions"] = encodeConditions(map[string]string{"keyword": keyword})
+	}
+	if withoutStudent {
+		params["without_student"] = "true"
+	}
+	u = addQueryParams(u, params)
+	result := new(AvailableUsersResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListStudents returns course students with optional avatar suppression.
+func (s *Service) ListStudents(ctx context.Context, courseID int, params ListStudentsParams) (*StudentsResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/students", courseID)
+	query := map[string]string{}
+	if params.IgnoreAvatar {
+		query["ignore_avatar"] = "true"
+	}
+	u = addQueryParams(u, query)
+	result := new(StudentsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // ListAllSections returns all sections for a course.
-func (s *Service) ListAllSections(ctx context.Context, courseID int) (json.RawMessage, error) {
+func (s *Service) ListAllSections(ctx context.Context, courseID int) (*SectionsResponse, error) {
 	u := fmt.Sprintf("/api/courses/%d/all-sections", courseID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(SectionsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListScoreItemGroups returns score item groups for a course.
+func (s *Service) ListScoreItemGroups(ctx context.Context, courseID int, withoutScoreItem bool) (*ScoreItemGroupsResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/score-item-groups", courseID)
+	if withoutScoreItem {
+		u = addQueryParams(u, map[string]string{"without_score_item": "true"})
+	}
+	result := new(ScoreItemGroupsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -156,6 +265,14 @@ func (s *Service) GetActivityPublishSetting(ctx context.Context, courseID int) (
 	u := fmt.Sprintf("/api/course/%d/activity-publish-setting", courseID)
 	result := new(ActivityPublishSetting)
 	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetTemplateSetting returns the course template setting.
+func (s *Service) GetTemplateSetting(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course/%d/template-setting", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
@@ -300,6 +417,75 @@ func (s *Service) ResortActivities(ctx context.Context, body interface{}) error 
 	return err
 }
 
+// AssignActivityToModule assigns an activity to a module within a course.
+func (s *Service) AssignActivityToModule(ctx context.Context, courseID int, body interface{}) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/courses/%d/assign-activity-to-module", courseID)
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// AddEnrollments adds course enrollments using the teaching-team endpoint.
+func (s *Service) AddEnrollments(ctx context.Context, courseID int, body interface{}) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course/%d/add-enrollments", courseID)
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// UpdateEnrollment updates a single course enrollment.
+func (s *Service) UpdateEnrollment(ctx context.Context, enrollmentID int, body interface{}) error {
+	u := fmt.Sprintf("/api/course/enrollments/%d", enrollmentID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// UpdateEnrollmentSeatNumber updates a course enrollment seat number.
+func (s *Service) UpdateEnrollmentSeatNumber(ctx context.Context, enrollmentID int, body *UpdateEnrollmentSeatNumberRequest) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/enrollments/%d", enrollmentID)
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, body, &result)
+	return result, err
+}
+
+// DeleteStudentEnrollment removes a user enrollment from a course.
+func (s *Service) DeleteStudentEnrollment(ctx context.Context, courseID int, userID int) error {
+	u := fmt.Sprintf("/api/course/%d/students/%d", courseID, userID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// MailToEnrollments sends an email to selected enrollments.
+func (s *Service) MailToEnrollments(ctx context.Context, courseID int, body *SendMailToEnrollmentsRequest) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/courses/%d/mail-to-enrollments", courseID)
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// GetAssistantPermissions returns course assistant permissions.
+func (s *Service) GetAssistantPermissions(ctx context.Context, courseID int) (*AssistantPermissions, error) {
+	u := fmt.Sprintf("/api/course/%d/assistant-permissions", courseID)
+	result := new(AssistantPermissions)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateAssistantPermissions updates course assistant permissions.
+func (s *Service) UpdateAssistantPermissions(ctx context.Context, courseID int, body *UpdateAssistantPermissionsRequest) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/course/%d/assistant-permissions", courseID)
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, body, &result)
+	return result, err
+}
+
+// UpdateMainSetting updates main teaching-team settings such as course leader.
+func (s *Service) UpdateMainSetting(ctx context.Context, courseID int, body interface{}) error {
+	u := fmt.Sprintf("/api/courses/%d/main-setting", courseID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
 // SyncFromURP syncs courses from URP.
 func (s *Service) SyncFromURP(ctx context.Context, courseIDs []int) error {
 	_, err := s.client.Post(ctx, "/api/courses/sync_from_urp", map[string][]int{"course_ids": courseIDs}, nil)
@@ -332,8 +518,15 @@ func (s *Service) GetBlueprintSubItems(ctx context.Context, courseID int, params
 }
 
 // GetBlueprintSubItemsCount returns blueprint sub-items count.
-func (s *Service) GetBlueprintSubItemsCount(ctx context.Context, courseID int) (*BlueprintSubItemsResponse, error) {
+func (s *Service) GetBlueprintSubItemsCount(ctx context.Context, courseID int, activities []BlueprintActivityRef) (*BlueprintSubItemsResponse, error) {
 	u := fmt.Sprintf("/api/blueprint/%d/sub-items-count", courseID)
+	if len(activities) > 0 {
+		encoded, err := json.Marshal(activities)
+		if err != nil {
+			return nil, err
+		}
+		u = addQueryParams(u, map[string]string{"activities": string(encoded)})
+	}
 	result := new(BlueprintSubItemsResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
@@ -342,6 +535,14 @@ func (s *Service) GetBlueprintSubItemsCount(ctx context.Context, courseID int) (
 // SyncBlueprint syncs blueprint content to target courses.
 func (s *Service) SyncBlueprint(ctx context.Context, courseID int, body interface{}) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/blueprint/%d/sync", courseID)
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// PublishActivities publishes activities to target courses.
+func (s *Service) PublishActivities(ctx context.Context, courseID int, body PublishActivitiesRequest) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/courses/%d/publish-activities", courseID)
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, u, body, &result)
 	return result, err
@@ -363,17 +564,17 @@ func (s *Service) DeleteBlueprint(ctx context.Context, courseID int) error {
 }
 
 // CancelBlueprintActivitySync cancels blueprint sync for an activity.
-func (s *Service) CancelBlueprintActivitySync(ctx context.Context, courseID, activityID int, body interface{}) error {
+func (s *Service) CancelBlueprintActivitySync(ctx context.Context, courseID, activityID int, body *CancelBlueprintActivitySyncRequest) error {
 	u := fmt.Sprintf("/api/blueprint/%d/activities/%d/cancel-sync", courseID, activityID)
-	_, err := s.client.Delete(ctx, u, body)
+	_, err := s.client.DeleteWithBody(ctx, u, body, nil)
 	return err
 }
 
 // GetBlueprintSubmittedInfo returns blueprint submitted sync info for a target object.
-func (s *Service) GetBlueprintSubmittedInfo(ctx context.Context, courseID int, resourceType string, resourceID int) (json.RawMessage, error) {
+func (s *Service) GetBlueprintSubmittedInfo(ctx context.Context, courseID int, resourceType string, resourceID int) (*BlueprintSubmittedInfoResponse, error) {
 	u := fmt.Sprintf("/api/blueprint/%d/%s/%d/submitted-info", courseID, resourceType, resourceID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	result := new(BlueprintSubmittedInfoResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -404,6 +605,28 @@ func (s *Service) GetStatisticResourceAudit(ctx context.Context) (json.RawMessag
 	return result, err
 }
 
+// GetTextAnalyticsConfig returns course forum text analytics configuration.
+func (s *Service) GetTextAnalyticsConfig(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/courses/%d/text-analytics-config", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListCourseAuditReferences returns paged resource audit references for a specific course.
+func (s *Service) ListCourseAuditReferences(ctx context.Context, courseID int, params ListCourseResourceAuditParams) (*CourseAuditReferencesResponse, error) {
+	u := addListOptions(
+		fmt.Sprintf("/api/courses/%d/resource-audit", courseID),
+		&model.ListOptions{Page: params.Page, PageSize: params.PageSize},
+	)
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		u = addQueryParams(u, map[string]string{"conditions": encoded})
+	}
+	result := new(CourseAuditReferencesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // --- TPDOE ---
 
 // GetTPDOEStatStudents returns TPDOE student statistics.
@@ -412,6 +635,47 @@ func (s *Service) GetTPDOEStatStudents(ctx context.Context, courseID int) (json.
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
+}
+
+// GetTPDOEStatStudentsWithParams returns TPDOE student statistics using the newer frontend query shape.
+func (s *Service) GetTPDOEStatStudentsWithParams(ctx context.Context, params TPDOEStatStudentsParams) (json.RawMessage, error) {
+	values := url.Values{}
+	for _, courseID := range params.CourseIDs {
+		values.Add("courseIds", fmt.Sprintf("%d", courseID))
+	}
+	if params.StartDate != "" {
+		values.Set("startDate", params.StartDate)
+	}
+	if params.EndDate != "" {
+		values.Set("endDate", params.EndDate)
+	}
+	if params.StatType != "" {
+		values.Set("statType", params.StatType)
+	}
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		values.Set("conditions", encoded)
+	}
+	u := "/api/courses/tpdoe/stat-students"
+	if encoded := values.Encode(); encoded != "" {
+		u += "?" + encoded
+	}
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// InspectCourse triggers the backend inspection workflow for a course.
+func (s *Service) InspectCourse(ctx context.Context, courseID int) error {
+	u := fmt.Sprintf("/api/courses/%d/inspect", courseID)
+	_, err := s.client.Put(ctx, u, nil, nil)
+	return err
+}
+
+// UpdateAudit updates a course audit record.
+func (s *Service) UpdateAudit(ctx context.Context, courseID int, auditID int, body interface{}) error {
+	u := fmt.Sprintf("/api/courses/%d/audit/%d", courseID, auditID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
 }
 
 // --- Inspect Child ---
@@ -501,4 +765,19 @@ func addListOptions(urlStr string, opts *model.ListOptions) string {
 
 func addQueryParams(urlStr string, params map[string]string) string {
 	return sdk.AddQueryParams(urlStr, params)
+}
+
+func encodeConditions(conditions any) string {
+	switch value := conditions.(type) {
+	case nil:
+		return ""
+	case string:
+		return value
+	default:
+		encoded, err := json.Marshal(value)
+		if err != nil {
+			return ""
+		}
+		return string(encoded)
+	}
 }

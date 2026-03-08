@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
-
 
 // Service handles AI credit-related API operations.
 
@@ -33,6 +32,17 @@ func (s *Service) HasAIAbility(ctx context.Context) (*AIAbilityResponse, error) 
 func (s *Service) GetUserCreditStates(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, "/api/air-credit/user/credit-states", &result)
+	return result, err
+}
+
+// ListUserCreditStates returns paged user credit states.
+func (s *Service) ListUserCreditStates(ctx context.Context, params ListCreditStatesParams) (json.RawMessage, error) {
+	u := addListOptions("/api/air-credit/user/credit-states", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		u = addQueryParams(u, map[string]string{"conditions": encoded})
+	}
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
@@ -71,6 +81,17 @@ func (s *Service) GetCourseCreditInfo(ctx context.Context, courseID int) (json.R
 func (s *Service) GetCourseCreditStates(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, "/api/air-credit/course/credit-states", &result)
+	return result, err
+}
+
+// ListCourseCreditStates returns paged course credit states.
+func (s *Service) ListCourseCreditStates(ctx context.Context, params ListCreditStatesParams) (json.RawMessage, error) {
+	u := addListOptions("/api/air-credit/course/credit-states", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		u = addQueryParams(u, map[string]string{"conditions": encoded})
+	}
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
@@ -160,11 +181,32 @@ func (s *Service) GetCreditStatesSummary(ctx context.Context) (json.RawMessage, 
 	return result, err
 }
 
+// GetCreditStatesSummaryByType returns credit states summary for a specific target type.
+func (s *Service) GetCreditStatesSummaryByType(ctx context.Context, targetType string) (json.RawMessage, error) {
+	u := "/api/air-credit/credit-states-summary"
+	if targetType != "" {
+		u = addQueryParams(u, map[string]string{"type": targetType})
+	}
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // GetCreditStatesStats returns credit states statistics.
 func (s *Service) GetCreditStatesStats(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, "/api/air-credit/credit-states-stats", &result)
 	return result, err
+}
+
+// GetUserCreditStatesStats returns paged user credit statistics.
+func (s *Service) GetUserCreditStatesStats(ctx context.Context, params CreditStateStatsParams) (json.RawMessage, error) {
+	return s.getCreditStatesStats(ctx, "user", params)
+}
+
+// GetCourseCreditStatesStats returns paged course credit statistics.
+func (s *Service) GetCourseCreditStatesStats(ctx context.Context, params CreditStateStatsParams) (json.RawMessage, error) {
+	return s.getCreditStatesStats(ctx, "course", params)
 }
 
 // GetOrgCreditStateInfo returns org credit state info.
@@ -177,6 +219,17 @@ func (s *Service) GetOrgCreditStateInfo(ctx context.Context) (json.RawMessage, e
 // ListAudits returns AI credit audit records.
 func (s *Service) ListAudits(ctx context.Context, opts *model.ListOptions) (json.RawMessage, error) {
 	u := addListOptions("/api/air-credit/audits", opts)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListAuditsWithParams returns AI credit audit records with paging and filters.
+func (s *Service) ListAuditsWithParams(ctx context.Context, params ListAuditsParams) (json.RawMessage, error) {
+	u := addListOptions("/api/air-credit/audits", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		u = addQueryParams(u, map[string]string{"conditions": encoded})
+	}
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
@@ -244,6 +297,17 @@ func (s *Service) GetInstructorCurrentSemesterCourses(ctx context.Context) (json
 	return result, err
 }
 
+// GetInstructorCurrentSemesterCoursesByUserIDs returns current semester courses for selected instructors.
+func (s *Service) GetInstructorCurrentSemesterCoursesByUserIDs(ctx context.Context, userIDs []int) (json.RawMessage, error) {
+	u := "/api/air-credit/instructors/current-semester-courses"
+	if len(userIDs) > 0 {
+		u = addQueryParams(u, map[string]string{"user_ids": joinInts(userIDs)})
+	}
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // GetResourceInfo returns AI resource info.
 func (s *Service) GetResourceInfo(ctx context.Context, resourceID int) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/air-credit/resources/%d", resourceID)
@@ -265,29 +329,36 @@ func (s *Service) GetUserAIInfo(ctx context.Context, userID int) (json.RawMessag
 // GetAIPPTUsage returns AI PPT usage.
 func (s *Service) GetAIPPTUsage(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/ai-ppt/usage", &result)
+	_, err := s.client.Post(ctx, "/api/ai-ppt/usage", nil, &result)
 	return result, err
 }
 
 // GetAIPPTUsageStats returns AI PPT usage statistics.
-func (s *Service) GetAIPPTUsageStats(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/ai-ppt/usage/stats", &result)
+func (s *Service) GetAIPPTUsageStats(ctx context.Context, params ListAIPPTUsageStatsParams) (*AIPPTUsageStatsResponse, error) {
+	u := addListOptions("/api/ai-ppt/usage/stats", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		u = addQueryParams(u, map[string]string{"conditions": encoded})
+	}
+	result := new(AIPPTUsageStatsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
 // GetAIPPTUserUsageCount returns AI PPT user usage count.
-func (s *Service) GetAIPPTUserUsageCount(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
+func (s *Service) GetAIPPTUserUsageCount(ctx context.Context) (*AIPPTUserUsageCountResponse, error) {
+	result := new(AIPPTUserUsageCountResponse)
 	_, err := s.client.Get(ctx, "/api/ai-ppt/user/usage/count", &result)
 	return result, err
 }
 
 // ExportAIPPTUserUsage exports AI PPT user usage.
-func (s *Service) ExportAIPPTUserUsage(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/ai-ppt/user-usage/export", &result)
-	return result, err
+func (s *Service) ExportAIPPTUserUsage(ctx context.Context, body ExportAIPPTUserUsageRequest) ([]byte, error) {
+	req, err := s.client.NewRequest(ctx, "POST", "/api/ai-ppt/user-usage/export", body)
+	if err != nil {
+		return nil, err
+	}
+	_, blob, err := s.client.DoBytes(req)
+	return blob, err
 }
 
 // --- Text Optimization ---
@@ -308,4 +379,48 @@ func addListOptions(urlStr string, opts *model.ListOptions) string {
 
 func addQueryParams(urlStr string, params map[string]string) string {
 	return sdk.AddQueryParams(urlStr, params)
+}
+
+func encodeConditions(conditions any) string {
+	switch value := conditions.(type) {
+	case nil:
+		return ""
+	case string:
+		return value
+	default:
+		encoded, err := json.Marshal(value)
+		if err != nil {
+			return ""
+		}
+		return string(encoded)
+	}
+}
+
+func (s *Service) getCreditStatesStats(ctx context.Context, statType string, params CreditStateStatsParams) (json.RawMessage, error) {
+	u := addListOptions("/api/air-credit/credit-states-stats", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	query := map[string]string{"type": statType}
+	if params.StartDate != "" {
+		query["start_date"] = params.StartDate
+	}
+	if params.EndDate != "" {
+		query["end_date"] = params.EndDate
+	}
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		query["conditions"] = encoded
+	}
+	u = addQueryParams(u, query)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+func joinInts(values []int) string {
+	if len(values) == 0 {
+		return ""
+	}
+	out := fmt.Sprintf("%d", values[0])
+	for i := 1; i < len(values); i++ {
+		out += fmt.Sprintf(",%d", values[i])
+	}
+	return out
 }

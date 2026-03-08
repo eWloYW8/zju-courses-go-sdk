@@ -81,21 +81,22 @@ type Prerequisite struct {
 }
 
 type ActivityUser struct {
-	ID             int                    `json:"id"`
-	Name           *string                `json:"name,omitempty"`
-	Email          *string                `json:"email,omitempty"`
-	Nickname       *string                `json:"nickname,omitempty"`
-	UserNo         string                 `json:"user_no,omitempty"`
-	Comment        *string                `json:"comment,omitempty"`
-	Grade          *string                `json:"grade,omitempty"`
-	Klass          *string                `json:"klass,omitempty"`
-	AvatarSmallURL string                 `json:"avatar_small_url,omitempty"`
-	AvatarBigURL   string                 `json:"avatar_big_url,omitempty"`
-	PortfolioURL   string                 `json:"portfolio_url,omitempty"`
-	Department     *model.Department      `json:"department,omitempty"`
-	Org            *model.OrgDetail       `json:"org,omitempty"`
-	Program        *model.Program         `json:"program,omitempty"`
-	UserAttributes map[string]interface{} `json:"user_attributes,omitempty"`
+	ID             int                   `json:"id"`
+	Name           *string               `json:"name,omitempty"`
+	Email          *string               `json:"email,omitempty"`
+	Nickname       *string               `json:"nickname,omitempty"`
+	UserNo         string                `json:"user_no,omitempty"`
+	Comment        *string               `json:"comment,omitempty"`
+	Grade          *model.Grade          `json:"grade,omitempty"`
+	Klass          *model.Class          `json:"klass,omitempty"`
+	AvatarSmallURL string                `json:"avatar_small_url,omitempty"`
+	AvatarBigURL   string                `json:"avatar_big_url,omitempty"`
+	PortfolioURL   string                `json:"portfolio_url,omitempty"`
+	Department     *model.Department     `json:"department,omitempty"`
+	LearningCenter *model.LearningCenter `json:"learning_center,omitempty"`
+	Org            *model.OrgDetail      `json:"org,omitempty"`
+	Program        *model.Program        `json:"program,omitempty"`
+	UserAttributes *model.UserAttributes `json:"user_attributes,omitempty"`
 }
 
 type Activity struct {

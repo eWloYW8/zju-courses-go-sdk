@@ -6,20 +6,22 @@ import (
 )
 
 type CourseAttributes struct {
-	AudienceType          any     `json:"audience_type"`
-	CopyStatus            *string `json:"copy_status,omitempty"`
-	Data                  any     `json:"data,omitempty"`
-	GraduateMethod        string  `json:"graduate_method,omitempty"`
-	IsDuringPublishPeriod bool    `json:"is_during_publish_period,omitempty"`
-	Published             bool    `json:"published,omitempty"`
-	TeachingClassName     string  `json:"teaching_class_name,omitempty"`
-	Tip                   *string `json:"tip,omitempty"`
-	EducationType         int     `json:"education_type,omitempty"`
-	PracticeHours         *int    `json:"practice_hours,omitempty"`
-	StudentCount          int     `json:"student_count,omitempty"`
-	TheoryHours           *int    `json:"theory_hours,omitempty"`
-	TotalHours            *int    `json:"total_hours,omitempty"`
-	ClassHours            *int    `json:"class_hours,omitempty"`
+	AudienceType          any      `json:"audience_type"`
+	CopyStatus            *string  `json:"copy_status,omitempty"`
+	Data                  any      `json:"data,omitempty"`
+	GraduateMethod        string   `json:"graduate_method,omitempty"`
+	IsDuringPublishPeriod bool     `json:"is_during_publish_period,omitempty"`
+	PassingScore          *float64 `json:"passing_score,omitempty"`
+	Published             bool     `json:"published,omitempty"`
+	ScoreType             *string  `json:"score_type,omitempty"`
+	TeachingClassName     string   `json:"teaching_class_name,omitempty"`
+	Tip                   *string  `json:"tip,omitempty"`
+	EducationType         int      `json:"education_type,omitempty"`
+	PracticeHours         *int     `json:"practice_hours,omitempty"`
+	StudentCount          int      `json:"student_count,omitempty"`
+	TheoryHours           *int     `json:"theory_hours,omitempty"`
+	TotalHours            *int     `json:"total_hours,omitempty"`
+	ClassHours            *int     `json:"class_hours,omitempty"`
 }
 
 type Course struct {
@@ -47,11 +49,12 @@ type Course struct {
 	ImportedFrom              string                     `json:"imported_from,omitempty"`
 	StartDate                 *string                    `json:"start_date,omitempty"`
 	EndDate                   *string                    `json:"end_date,omitempty"`
-	Grade                     *string                    `json:"grade,omitempty"`
+	Grade                     *model.Grade               `json:"grade,omitempty"`
 	IsStarted                 bool                       `json:"is_started,omitempty"`
 	IsClosed                  bool                       `json:"is_closed,omitempty"`
 	IsInstructor              bool                       `json:"is_instructor,omitempty"`
 	IsMute                    bool                       `json:"is_mute,omitempty"`
+	Registered                bool                       `json:"registered,omitempty"`
 	IsTeamTeaching            bool                       `json:"is_team_teaching,omitempty"`
 	IsDefaultCourseCover      bool                       `json:"is_default_course_cover,omitempty"`
 	IsStudio                  bool                       `json:"is_studio,omitempty"`
@@ -66,9 +69,10 @@ type Course struct {
 	AuditRemark               *string                    `json:"audit_remark,omitempty"`
 	PublicScope               string                     `json:"public_scope,omitempty"`
 	Compulsory                *bool                      `json:"compulsory,omitempty"`
-	Klass                     *string                    `json:"klass,omitempty"`
+	Klass                     *model.Class               `json:"klass,omitempty"`
 	CanWithdrawCourse         bool                       `json:"can_withdraw_course,omitempty"`
 	ClassroomSchedule         *string                    `json:"classroom_schedule,omitempty"`
+	KnowledgeNodeCount        int                        `json:"knowledge_node_count,omitempty"`
 	StudyCompleteness         *float64                   `json:"study_completeness,omitempty"`
 	UserStickCourseRecord     any                        `json:"user_stick_course_record,omitempty"`
 	SubjectCode               *string                    `json:"subject_code,omitempty"`
@@ -89,6 +93,7 @@ type Course struct {
 	ProblemGraphPublishType   string                     `json:"problem_graph_publish_type,omitempty"`
 	CreatedAt                 string                     `json:"created_at,omitempty"`
 	UpdatedAt                 string                     `json:"updated_at,omitempty"`
+	TeamTeachings             []*activities.ActivityUser `json:"team_teachings,omitempty"`
 	Modules                   []*Module                  `json:"modules,omitempty"`
 	Enrollments               []*Enrollment              `json:"enrollments,omitempty"`
 	Description               *string                    `json:"description,omitempty"`
@@ -123,7 +128,7 @@ type Syllabus struct {
 	Activities []*activities.Activity `json:"activities,omitempty"`
 }
 
-type EnrollmentDetail = activities.ActivityUser
+type EnrollmentDetail = model.User
 
 type Enrollment struct {
 	ID             int                      `json:"id"`
@@ -139,6 +144,11 @@ type Enrollment struct {
 	CreatedAt      string                   `json:"created_at,omitempty"`
 	UpdatedAt      string                   `json:"updated_at,omitempty"`
 	User           *activities.ActivityUser `json:"user,omitempty"`
+}
+
+type Section struct {
+	ID   int    `json:"id"`
+	Name string `json:"name,omitempty"`
 }
 
 type NavSetting struct {
@@ -270,6 +280,18 @@ type BlueprintSubItemsResponse struct {
 type BlueprintSubItem struct {
 	CourseID int `json:"course_id"`
 	Count    int `json:"count"`
+}
+
+type BlueprintSubmittedInfo struct {
+	ID    int    `json:"id,omitempty"`
+	Type  string `json:"type,omitempty"`
+	Title string `json:"title,omitempty"`
+	Name  string `json:"name,omitempty"`
+}
+
+type ScoreItemGroup struct {
+	ID   int    `json:"id"`
+	Name string `json:"name,omitempty"`
 }
 
 // CustomScoreItem represents a custom score item for course grading.

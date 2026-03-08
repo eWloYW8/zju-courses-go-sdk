@@ -15,3 +15,7 @@ type ProjectApplicationsResponse struct {
 	Items []json.RawMessage `json:"items"`
 	model.Pagination
 }
+
+type RoomLocationsResponse struct {
+	Rooms []*RoomLocation `json:"rooms"`
+}

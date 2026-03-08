@@ -21,3 +21,10 @@ type ClassesResponse struct {
 type GradesResponse struct {
 	Grades []*model.Grade `json:"grades"`
 }
+
+type AssistantRolesResponse []*AssistantRole
+
+type JobStatusResponse struct {
+	Status string         `json:"status,omitempty"`
+	Result map[string]any `json:"result,omitempty"`
+}

@@ -14,3 +14,11 @@ type Interaction struct {
 type CourseInteractionsResponse struct {
 	Interactions []*Interaction `json:"interactions"`
 }
+
+type InteractionSubjectsResponse struct {
+	Subjects []*InteractionSubject `json:"subjects"`
+}
+
+type InteractionSubmissionsResponse struct {
+	Submissions []*InteractionSubmission `json:"submissions"`
+}

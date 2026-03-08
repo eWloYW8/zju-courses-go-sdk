@@ -151,6 +151,49 @@ func (s *Service) ListPagedResourceGroupResources(ctx context.Context, groupID i
 	return result, err
 }
 
+// ListPagedResourceGroupRubrics returns rubrics in a specific resource group.
+func (s *Service) ListPagedResourceGroupRubrics(ctx context.Context, groupID int, opts *model.ListOptions, conditions string) (*ResourceGroupRubricsResponse, error) {
+	u := addListOptions(fmt.Sprintf("/api/resource-groups/%d/rubrics", groupID), opts)
+	if conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": conditions})
+	}
+	result := new(ResourceGroupRubricsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListPagedResourceGroupSubjectLibs returns subject libs in a specific resource group.
+func (s *Service) ListPagedResourceGroupSubjectLibs(ctx context.Context, groupID int, opts *model.ListOptions, conditions string) (*ResourceGroupSubjectLibsResponse, error) {
+	u := addListOptions(fmt.Sprintf("/api/resource-groups/%d/subject-libs", groupID), opts)
+	if conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": conditions})
+	}
+	result := new(ResourceGroupSubjectLibsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// DeleteResourceGroupFolder deletes a folder from a resource group.
+func (s *Service) DeleteResourceGroupFolder(ctx context.Context, groupID int, folderID int) error {
+	u := fmt.Sprintf("/api/resource-groups/%d/folders/%d", groupID, folderID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// UpdateResourceGroupResource updates a shared resource record inside a resource group.
+func (s *Service) UpdateResourceGroupResource(ctx context.Context, groupID int, resourceID int, body *UpdateResourceGroupResourceRequest) error {
+	u := fmt.Sprintf("/api/resource-groups/%d/resource/%d", groupID, resourceID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// DeleteResourceGroupSubjectLib deletes a subject lib record referenced by a resource group.
+func (s *Service) DeleteResourceGroupSubjectLib(ctx context.Context, subjectLibID int) error {
+	u := fmt.Sprintf("/api/subject-libs/%d", subjectLibID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
 // --- Resource Folders ---
 
 // ListResourceFolders returns resource folders.

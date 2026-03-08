@@ -49,12 +49,59 @@ func (s *Service) GetInteractionActivity(ctx context.Context, activityID int) (j
 	return result, err
 }
 
+// ListInteractionSubjects returns the subjects configured for an interaction activity.
+func (s *Service) ListInteractionSubjects(ctx context.Context, activityID int) (*InteractionSubjectsResponse, error) {
+	u := fmt.Sprintf("/api/interaction-activities/%d/subjects", activityID)
+	result := new(InteractionSubjectsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetCurrentUserInteractionSubmission returns the current user's submission for an interaction activity.
+func (s *Service) GetCurrentUserInteractionSubmission(ctx context.Context, activityID int) (*InteractionSubmission, error) {
+	u := fmt.Sprintf("/api/interaction-activities/%d/submission", activityID)
+	result := new(InteractionSubmission)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListInteractionSubmissions returns submissions for an interaction activity.
+func (s *Service) ListInteractionSubmissions(ctx context.Context, activityID int) (*InteractionSubmissionsResponse, error) {
+	u := fmt.Sprintf("/api/interaction-activities/%d/submissions", activityID)
+	result := new(InteractionSubmissionsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// CreateInteractionSubmission creates a submission for an interaction activity.
+func (s *Service) CreateInteractionSubmission(ctx context.Context, activityID int) (*InteractionSubmission, error) {
+	u := fmt.Sprintf("/api/interaction-activities/%d/submissions", activityID)
+	result := new(InteractionSubmission)
+	_, err := s.client.Post(ctx, u, nil, result)
+	return result, err
+}
+
 // GetInteractionSubmission returns an interaction submission.
 func (s *Service) GetInteractionSubmission(ctx context.Context, submissionID int) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/interaction-submissions/%d", submissionID)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
+}
+
+// UpdateInteractionSubmission updates answers in an interaction submission.
+func (s *Service) UpdateInteractionSubmission(ctx context.Context, submissionID int, body *UpdateInteractionSubmissionRequest) (*InteractionSubmission, error) {
+	u := fmt.Sprintf("/api/interaction-submissions/%d", submissionID)
+	result := new(InteractionSubmission)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
+}
+
+// SaveInteractionActivityAsResource saves an interaction activity as a reusable resource.
+func (s *Service) SaveInteractionActivityAsResource(ctx context.Context, activityID int) error {
+	u := fmt.Sprintf("/api/interaction-activities/%d/save-as-resource", activityID)
+	_, err := s.client.Post(ctx, u, nil, nil)
+	return err
 }
 
 // ListCourseInteractions returns interactions for a course.

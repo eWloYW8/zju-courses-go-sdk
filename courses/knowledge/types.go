@@ -4,14 +4,33 @@ import "github.com/eWloYW8/zju-courses-go-sdk/courses/model"
 
 // KnowledgeNode represents a knowledge node in the course knowledge tree.
 type KnowledgeNode struct {
-	ID         int              `json:"id"`
-	Name       string           `json:"name,omitempty"`
-	ParentID   *int             `json:"parent_id,omitempty"`
-	CourseID   int              `json:"course_id,omitempty"`
-	Sort       int              `json:"sort,omitempty"`
-	Level      int              `json:"level,omitempty"`
-	Children   []*KnowledgeNode `json:"children,omitempty"`
-	Activities []*model.Activity `json:"activities,omitempty"`
+	ID                 int                          `json:"id"`
+	Name               string                       `json:"name,omitempty"`
+	ParentID           *int                         `json:"parent_id,omitempty"`
+	CourseID           int                          `json:"course_id,omitempty"`
+	Sort               int                          `json:"sort,omitempty"`
+	Level              int                          `json:"level,omitempty"`
+	Description        string                       `json:"description,omitempty"`
+	Source             string                       `json:"source,omitempty"`
+	States             *KnowledgeNodeState          `json:"states,omitempty"`
+	MasteryRate        *float64                     `json:"mastery_rate,omitempty"`
+	CompletenessRate   *float64                     `json:"completeness_rate,omitempty"`
+	ResourceRefCount   int                          `json:"resource_ref_count,omitempty"`
+	ActivityRefCount   int                          `json:"activity_ref_count,omitempty"`
+	SubjectRefCount    int                          `json:"subject_ref_count,omitempty"`
+	CaptureRefCount    int                          `json:"capture_ref_count,omitempty"`
+	CognitiveDimension string                       `json:"cognitive_dimension,omitempty"`
+	PrevRelation       []*KnowledgeNodeRelationMeta `json:"prev_relation,omitempty"`
+	PostRelation       []*KnowledgeNodeRelationMeta `json:"post_relation,omitempty"`
+	UndirectedRelation []*KnowledgeNodeRelationMeta `json:"undirected_relation,omitempty"`
+	Children           []*KnowledgeNode             `json:"children,omitempty"`
+	Activities         []*model.Activity            `json:"activities,omitempty"`
+	TeachingObjectives []*TeachingObjective         `json:"teaching_objectives,omitempty"`
+	Uploads            []*model.Upload              `json:"uploads,omitempty"`
+	ExternalResources  []*KnowledgeExternalResource `json:"external_resources,omitempty"`
+	Captures           []*KnowledgeCapture          `json:"captures,omitempty"`
+	Subjects           []*KnowledgeSubject          `json:"subjects,omitempty"`
+	Labels             []*KnowledgeLabel            `json:"labels,omitempty"`
 }
 
 type KnowledgeCapture struct {
@@ -19,10 +38,14 @@ type KnowledgeCapture struct {
 	Code      string  `json:"code,omitempty"`
 	Title     string  `json:"title,omitempty"`
 	Name      string  `json:"name,omitempty"`
+	OrgCode   string  `json:"org_code,omitempty"`
 	CourseID  *int    `json:"course_id,omitempty"`
 	UploadID  *int    `json:"upload_id,omitempty"`
 	URL       string  `json:"url,omitempty"`
 	Cover     *string `json:"cover,omitempty"`
+	Deleted   bool    `json:"deleted,omitempty"`
+	Viewed    bool    `json:"viewed,omitempty"`
+	ReferID   int     `json:"refer_id,omitempty"`
 	CreatedAt string  `json:"created_at,omitempty"`
 	UpdatedAt string  `json:"updated_at,omitempty"`
 }
@@ -43,8 +66,8 @@ type KnowledgeNodeSummaryNode struct {
 	ID                      int                         `json:"id"`
 	ParentID                *int                        `json:"parent_id,omitempty"`
 	Name                    string                      `json:"name,omitempty"`
-	AverageMasteryRate      string                      `json:"average_mastery_rate,omitempty"`
-	AverageCompletenessRate string                      `json:"average_completeness_rate,omitempty"`
+	AverageMasteryRate      *float64                    `json:"average_mastery_rate,omitempty"`
+	AverageCompletenessRate *float64                    `json:"average_completeness_rate,omitempty"`
 	CognitiveDimension      string                      `json:"cognitive_dimension,omitempty"`
 	Children                []*KnowledgeNodeSummaryNode `json:"children,omitempty"`
 }
@@ -52,8 +75,8 @@ type KnowledgeNodeSummaryNode struct {
 type KnowledgeNodeStatisticsSummary struct {
 	NodeCount                    int                         `json:"node_count,omitempty"`
 	NodeWithReferenceCount       int                         `json:"node_with_reference_count,omitempty"`
-	AverageMasteryRate           string                      `json:"average_mastery_rate,omitempty"`
-	AverageCompletenessRate      string                      `json:"average_completeness_rate,omitempty"`
+	AverageMasteryRate           *float64                    `json:"average_mastery_rate,omitempty"`
+	AverageCompletenessRate      *float64                    `json:"average_completeness_rate,omitempty"`
 	RelationCount                int                         `json:"relation_count,omitempty"`
 	CompletenessRateDistribution any                         `json:"completeness_rate_distribution,omitempty"`
 	MasteryRateDistribution      any                         `json:"mastery_rate_distribution,omitempty"`
@@ -61,58 +84,58 @@ type KnowledgeNodeStatisticsSummary struct {
 }
 
 type KnowledgeNodeOverview struct {
-	ID                           int    `json:"id"`
-	Name                         string `json:"name,omitempty"`
-	Description                  string `json:"description,omitempty"`
-	AverageMasteryRate           string `json:"avg_mastery_rate,omitempty"`
-	AverageCompletenessRate      string `json:"avg_completeness_rate,omitempty"`
-	UploadCount                  int    `json:"upload_count,omitempty"`
-	ActivityCount                int    `json:"activity_count,omitempty"`
-	CompletenessRateDistribution any    `json:"completeness_rate_distribution,omitempty"`
-	MasteryRateDistribution      any    `json:"mastery_rate_distribution,omitempty"`
+	ID                           int      `json:"id"`
+	Name                         string   `json:"name,omitempty"`
+	Description                  string   `json:"description,omitempty"`
+	AverageMasteryRate           *float64 `json:"avg_mastery_rate,omitempty"`
+	AverageCompletenessRate      *float64 `json:"avg_completeness_rate,omitempty"`
+	UploadCount                  int      `json:"upload_count,omitempty"`
+	ActivityCount                int      `json:"activity_count,omitempty"`
+	CompletenessRateDistribution any      `json:"completeness_rate_distribution,omitempty"`
+	MasteryRateDistribution      any      `json:"mastery_rate_distribution,omitempty"`
 }
 
 type KnowledgeNodeStudentDimensionItem struct {
-	StudentID        int    `json:"student_id,omitempty"`
-	Name             string `json:"name,omitempty"`
-	UserNo           string `json:"user_no,omitempty"`
-	MasteryRate      string `json:"mastery_rate,omitempty"`
-	CompletenessRate string `json:"completeness_rate,omitempty"`
-	ImportedFrom     string `json:"imported_from,omitempty"`
+	StudentID        int      `json:"student_id,omitempty"`
+	Name             string   `json:"name,omitempty"`
+	UserNo           string   `json:"user_no,omitempty"`
+	MasteryRate      *float64 `json:"mastery_rate,omitempty"`
+	CompletenessRate *float64 `json:"completeness_rate,omitempty"`
+	ImportedFrom     string   `json:"imported_from,omitempty"`
 }
 
 type KnowledgeNodeStudentDetail struct {
 	StudentID            int                         `json:"student_id,omitempty"`
 	Name                 string                      `json:"name,omitempty"`
 	UserNo               string                      `json:"user_no,omitempty"`
-	MasteryRate          string                      `json:"mastery_rate,omitempty"`
-	CompletenessRate     string                      `json:"completeness_rate,omitempty"`
+	MasteryRate          *float64                    `json:"mastery_rate,omitempty"`
+	CompletenessRate     *float64                    `json:"completeness_rate,omitempty"`
 	ImportedFrom         string                      `json:"imported_from,omitempty"`
-	MasteryRateRank      string                      `json:"mastery_rate_rank,omitempty"`
-	CompletenessRateRank string                      `json:"completeness_rate_rank,omitempty"`
+	MasteryRateRank      *int                        `json:"mastery_rate_rank,omitempty"`
+	CompletenessRateRank *int                        `json:"completeness_rate_rank,omitempty"`
 	Nodes                []*KnowledgeNodeSummaryNode `json:"nodes,omitempty"`
 }
 
 type KnowledgeNodeResourceDetail struct {
-	ID                int    `json:"id"`
-	Name              string `json:"name,omitempty"`
-	Type              string `json:"type,omitempty"`
-	AllowDownload     bool   `json:"allow_download,omitempty"`
-	Extension         string `json:"extension,omitempty"`
-	CompletionStudent string `json:"completion_student,omitempty"`
-	Completeness      string `json:"completeness,omitempty"`
-	Visits            int    `json:"visits,omitempty"`
-	Source            string `json:"source,omitempty"`
-	Status            string `json:"status,omitempty"`
+	ID                int      `json:"id"`
+	Name              string   `json:"name,omitempty"`
+	Type              string   `json:"type,omitempty"`
+	AllowDownload     bool     `json:"allow_download,omitempty"`
+	Extension         string   `json:"extension,omitempty"`
+	CompletionStudent string   `json:"completion_student,omitempty"`
+	Completeness      *float64 `json:"completeness,omitempty"`
+	Visits            int      `json:"visits,omitempty"`
+	Source            string   `json:"source,omitempty"`
+	Status            string   `json:"status,omitempty"`
 }
 
 type KnowledgeNodeActivityDetail struct {
-	ID                int    `json:"id"`
-	Name              string `json:"name,omitempty"`
-	Type              string `json:"type,omitempty"`
-	CompletionStudent string `json:"completion_student,omitempty"`
-	Completeness      string `json:"completeness,omitempty"`
-	MasteryRate       string `json:"mastery_rate,omitempty"`
+	ID                int      `json:"id"`
+	Name              string   `json:"name,omitempty"`
+	Type              string   `json:"type,omitempty"`
+	CompletionStudent string   `json:"completion_student,omitempty"`
+	Completeness      *float64 `json:"completeness,omitempty"`
+	MasteryRate       *float64 `json:"mastery_rate,omitempty"`
 }
 
 type KnowledgeNodeStudentResourceStat struct {
@@ -134,8 +157,8 @@ type KnowledgeNodeStudentActivityStat struct {
 }
 
 type KnowledgeNodeStudentOverallStatistics struct {
-	OverallCompletenessRate string `json:"overall_completeness_rate,omitempty"`
-	OverallMasteryRate      string `json:"overall_mastery_rate,omitempty"`
+	OverallCompletenessRate *float64 `json:"overall_completeness_rate,omitempty"`
+	OverallMasteryRate      *float64 `json:"overall_mastery_rate,omitempty"`
 }
 
 type KnowledgeGraphUser struct {
@@ -223,7 +246,7 @@ type KnowledgeGraphSnapshotRelation struct {
 }
 
 type KnowledgeGraphSnapshot struct {
-	Tree         *KnowledgeNode              `json:"tree,omitempty"`
+	Tree         *KnowledgeNode                    `json:"tree,omitempty"`
 	Relations    []*KnowledgeGraphSnapshotRelation `json:"relations,omitempty"`
 	Completeness []float64                         `json:"completeness,omitempty"`
 	Mastery      []float64                         `json:"mastery,omitempty"`
@@ -257,16 +280,16 @@ type CoursewareActivity struct {
 }
 
 type KnowledgeNodeStudentReferenceStat struct {
-	NodeName         string `json:"node_name,omitempty"`
-	NodeDesc         string `json:"node_desc,omitempty"`
-	Name             string `json:"name,omitempty"`
-	UserNo           string `json:"user_no,omitempty"`
-	MasteryRank      string `json:"mastery_rank,omitempty"`
-	MasteryRate      string `json:"mastery_rate,omitempty"`
-	CompletenessRank string `json:"completeness_rank,omitempty"`
-	CompletenessRate string `json:"completeness_rate,omitempty"`
-	ResourceCount    int    `json:"resource_count,omitempty"`
-	ActivityCount    int    `json:"activity_count,omitempty"`
+	NodeName         string   `json:"node_name,omitempty"`
+	NodeDesc         string   `json:"node_desc,omitempty"`
+	Name             string   `json:"name,omitempty"`
+	UserNo           string   `json:"user_no,omitempty"`
+	MasteryRank      *int     `json:"mastery_rank,omitempty"`
+	MasteryRate      *float64 `json:"mastery_rate,omitempty"`
+	CompletenessRank *int     `json:"completeness_rank,omitempty"`
+	CompletenessRate *float64 `json:"completeness_rate,omitempty"`
+	ResourceCount    int      `json:"resource_count,omitempty"`
+	ActivityCount    int      `json:"activity_count,omitempty"`
 }
 
 type KnowledgeNodeReferTypeStats struct {
@@ -308,8 +331,8 @@ type KnowledgeFacet struct {
 }
 
 type KnowledgeReferenceData struct {
-	MaterialUploads []model.Upload `json:"material_uploads,omitempty"`
-	MediaFragments  []any          `json:"media_fragments,omitempty"`
+	MaterialUploads []*model.Upload           `json:"material_uploads,omitempty"`
+	MediaFragments  []*KnowledgeMediaFragment `json:"media_fragments,omitempty"`
 }
 
 type ActivityKnowledgeReference struct {
@@ -319,4 +342,80 @@ type ActivityKnowledgeReference struct {
 	ReferID         int                     `json:"refer_id,omitempty"`
 	ReferType       string                  `json:"refer_type,omitempty"`
 	Data            *KnowledgeReferenceData `json:"data,omitempty"`
+}
+
+type KnowledgeNodeState struct {
+	Expanded      bool `json:"expanded,omitempty"`
+	Selected      bool `json:"selected,omitempty"`
+	Checked       bool `json:"checked,omitempty"`
+	Indeterminate bool `json:"indeterminate,omitempty"`
+	Disabled      bool `json:"disabled,omitempty"`
+	Matched       bool `json:"matched,omitempty"`
+	Dragging      bool `json:"dragging,omitempty"`
+	Draggable     bool `json:"draggable,omitempty"`
+	Immutable     bool `json:"immutable,omitempty"`
+}
+
+type KnowledgeNodeRelationMeta struct {
+	ID         int    `json:"id,omitempty"`
+	Name       string `json:"name,omitempty"`
+	RelationID int    `json:"relation_id,omitempty"`
+	Data       any    `json:"data,omitempty"`
+}
+
+type KnowledgeLabel struct {
+	Key   string `json:"key,omitempty"`
+	Value string `json:"value,omitempty"`
+}
+
+type KnowledgeExternalResource struct {
+	ID         int    `json:"id,omitempty"`
+	ExternalID int    `json:"external_id,omitempty"`
+	Title      string `json:"title,omitempty"`
+	Type       string `json:"type,omitempty"`
+	Viewed     bool   `json:"viewed,omitempty"`
+	Visits     int    `json:"visits,omitempty"`
+	Data       any    `json:"data,omitempty"`
+}
+
+type KnowledgeSubjectSource struct {
+	ID           int    `json:"id,omitempty"`
+	Type         string `json:"type,omitempty"`
+	Name         string `json:"name,omitempty"`
+	IsMakeupExam bool   `json:"is_makeup_exam,omitempty"`
+}
+
+type KnowledgeNodeReferenceItem struct {
+	ID   int    `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
+type KnowledgeSubject struct {
+	ID                     int                           `json:"id,omitempty"`
+	Type                   string                        `json:"type,omitempty"`
+	Description            string                        `json:"description,omitempty"`
+	Point                  any                           `json:"point,omitempty"`
+	ShowAnswer             bool                          `json:"show_answer,omitempty"`
+	ShowExplanation        bool                          `json:"show_explanation,omitempty"`
+	Source                 *KnowledgeSubjectSource       `json:"source,omitempty"`
+	SubSubjects            []*KnowledgeSubject           `json:"sub_subjects,omitempty"`
+	KnowledgeNodeReference []*KnowledgeNodeReferenceItem `json:"knowledge_node_reference,omitempty"`
+}
+
+type KnowledgePoint struct {
+	ID      int    `json:"id,omitempty"`
+	Content string `json:"content,omitempty"`
+}
+
+type KnowledgeMediaFragment struct {
+	ChapterID          int               `json:"chapter_id,omitempty"`
+	ChapterName        string            `json:"chapter_name,omitempty"`
+	StartTS            int               `json:"start_ts,omitempty"`
+	EndTS              int               `json:"end_ts,omitempty"`
+	MediaID            int               `json:"media_id,omitempty"`
+	KnowledgeNodeID    int               `json:"knowledge_node_id,omitempty"`
+	KnowledgeNodeName  string            `json:"knowledge_node_name,omitempty"`
+	KnowledgePointList []*KnowledgePoint `json:"knowledge_point_list,omitempty"`
+	Duration           *float64          `json:"duration,omitempty"`
+	Completeness       *float64          `json:"completeness,omitempty"`
 }

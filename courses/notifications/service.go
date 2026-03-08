@@ -28,6 +28,42 @@ func (s *Service) ListNotifications(ctx context.Context, userID int, opts *model
 	return result, err
 }
 
+// ListNotificationsWithParams returns notifications using the offset/limit query shape used by the web notification center.
+func (s *Service) ListNotificationsWithParams(ctx context.Context, userID int, params *ListNotificationsParams) (*NotificationsResponse, error) {
+	u := fmt.Sprintf("/ntf/users/%d/notifications", userID)
+	query := map[string]string{}
+	if params != nil {
+		if params.Offset > 0 {
+			query["offset"] = fmt.Sprintf("%d", params.Offset)
+		}
+		if params.Limit > 0 {
+			query["limit"] = fmt.Sprintf("%d", params.Limit)
+		}
+		if params.Removed != "" {
+			query["removed"] = params.Removed
+		}
+		if params.AdditionalFields != "" {
+			query["additionalFields"] = params.AdditionalFields
+		}
+	}
+	u = addQueryParams(u, query)
+	result := new(NotificationsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// SetNotificationTop updates the pinned state of a notification.
+func (s *Service) SetNotificationTop(ctx context.Context, userID int, notificationID string, top bool, createdAt string) (*NotificationTopResponse, error) {
+	u := fmt.Sprintf("/ntf/users/%d/notifications/%s", userID, notificationID)
+	u = addQueryParams(u, map[string]string{
+		"top":        fmt.Sprintf("%t", top),
+		"created_at": createdAt,
+	})
+	result := new(NotificationTopResponse)
+	_, err := s.client.Post(ctx, u, nil, result)
+	return result, err
+}
+
 // --- Todos ---
 
 // ListTodos returns the current user's to-do list.

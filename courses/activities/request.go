@@ -32,6 +32,12 @@ type ActivityPrerequisiteQuery struct {
 	ActivityType string
 }
 
+type ActivityLockCondition struct {
+	ActivityID   int    `json:"activity_id"`
+	CourseID     int    `json:"course_id,omitempty"`
+	ActivityType string `json:"activity_type,omitempty"`
+}
+
 type LogExamActivityReadRequest struct {
 	Data map[string]any `json:"data,omitempty"`
 }

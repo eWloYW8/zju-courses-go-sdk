@@ -25,3 +25,8 @@ type BulletinsResponse struct {
 type LatestActivitiesResponse struct {
 	Activities []*LatestActivity `json:"activities,omitempty"`
 }
+
+type NotificationTopResponse struct {
+	Top       bool  `json:"top"`
+	Timestamp int64 `json:"timestamp,omitempty"`
+}

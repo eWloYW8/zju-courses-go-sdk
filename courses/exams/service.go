@@ -115,6 +115,29 @@ func (s *Service) UpdateExamScore(ctx context.Context, scoreID int, body interfa
 	return err
 }
 
+// UpdateExamSubjectExplanation updates the explanation text for a specific exam subject.
+func (s *Service) UpdateExamSubjectExplanation(ctx context.Context, examID int, subjectID int, body *UpdateExamSubjectExplanationRequest) (*ExamSubject, error) {
+	u := fmt.Sprintf("/api/exams/%d/subjects/%d/explanation", examID, subjectID)
+	result := new(ExamSubject)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
+}
+
+// GetExamScoreDistribution returns the score-distribution payload used by exam grading views.
+func (s *Service) GetExamScoreDistribution(ctx context.Context, examID int, conditions ExamScoreDistributionConditions) (ExamScoreDistributionResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/score-distribution", examID)
+	if conditions != nil {
+		body, err := json.Marshal(conditions)
+		if err != nil {
+			return nil, err
+		}
+		u += "?conditions=" + url.QueryEscape(string(body))
+	}
+	result := make(ExamScoreDistributionResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // --- Classroom / In-class Quiz ---
 
 // GetClassroom returns a classroom quiz.
@@ -127,7 +150,7 @@ func (s *Service) GetClassroom(ctx context.Context, classroomID int) (*Classroom
 
 // CreateClassroom creates a new classroom quiz.
 func (s *Service) CreateClassroom(ctx context.Context, courseID int, classroom interface{}) (*Classroom, error) {
-	u := fmt.Sprintf("/api/classroom-exams/%d", courseID)
+	u := fmt.Sprintf("/api/courses/%d/classroom-exams", courseID)
 	result := new(Classroom)
 	_, err := s.client.Post(ctx, u, classroom, result)
 	return result, err
@@ -135,7 +158,7 @@ func (s *Service) CreateClassroom(ctx context.Context, courseID int, classroom i
 
 // UpdateClassroom updates a classroom quiz.
 func (s *Service) UpdateClassroom(ctx context.Context, classroomID int, classroom interface{}) (*Classroom, error) {
-	u := fmt.Sprintf("/api/classrooms/%d", classroomID)
+	u := fmt.Sprintf("/api/classroom-exams/%d", classroomID)
 	result := new(Classroom)
 	_, err := s.client.Put(ctx, u, classroom, result)
 	return result, err
@@ -162,6 +185,22 @@ func (s *Service) SaveClassroomSubjects(ctx context.Context, classroomID int, bo
 	u := fmt.Sprintf("/api/classroom-exams/%d/subjects", classroomID)
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// SaveExamSubjects saves exam subjects.
+func (s *Service) SaveExamSubjects(ctx context.Context, examID int, body *SaveSubjectsRequest) (*SubjectsResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/subjects", examID)
+	result := new(SubjectsResponse)
+	_, err := s.client.Post(ctx, u, body, result)
+	return result, err
+}
+
+// SaveVideoQuizSubjects saves subjects for a video quiz.
+func (s *Service) SaveVideoQuizSubjects(ctx context.Context, videoQuizID int, body *SaveSubjectsRequest) (*SubjectsResponse, error) {
+	u := fmt.Sprintf("/api/video-quizzes/%d/subjects", videoQuizID)
+	result := new(SubjectsResponse)
+	_, err := s.client.Post(ctx, u, body, result)
 	return result, err
 }
 
@@ -277,6 +316,9 @@ func (s *Service) GenerateSubjectsByText(ctx context.Context, body interface{}) 
 func (s *Service) GetCoursewareQuizSettings(ctx context.Context) (*CoursewareQuizSettingsResponse, error) {
 	result := new(CoursewareQuizSettingsResponse)
 	_, err := s.client.Get(ctx, "/api/courseware-quiz/settings", result)
+	if err == nil && result.Setting != nil && result.QuizCountLimit == 0 {
+		result.QuizCountLimit = result.Setting.QuizCountLimit
+	}
 	return result, err
 }
 
@@ -353,6 +395,75 @@ func (s *Service) GetSubject(ctx context.Context, subjectID int) (*ExamSubject, 
 	u := fmt.Sprintf("/api/subjects/%d", subjectID)
 	result := new(ExamSubject)
 	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetSHTVUModules returns chapter/module data from the SHTVU study platform bridge.
+func (s *Service) GetSHTVUModules(ctx context.Context, courseID int) (*SHTVUModulesResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/query-shtvu-modules", courseID)
+	result := new(SHTVUModulesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// SearchSHTVUSubjects returns paginated SHTVU subjects for the given course.
+func (s *Service) SearchSHTVUSubjects(ctx context.Context, courseID int, params *SHTVUSearchSubjectsParams) (*SHTVUSubjectsResponse, error) {
+	query := map[string]string{}
+	if params != nil {
+		if params.Chapters != "" {
+			query["chapters"] = params.Chapters
+		}
+		if params.SubjectType != "" {
+			query["subject_type"] = params.SubjectType
+		}
+		if params.Difficulties != "" {
+			query["difficulties"] = params.Difficulties
+		}
+		if params.Keyword != "" {
+			query["keyword"] = params.Keyword
+		}
+		if params.PageIndex > 0 {
+			query["page_index"] = fmt.Sprintf("%d", params.PageIndex)
+		}
+		if params.PageSize > 0 {
+			query["page_size"] = fmt.Sprintf("%d", params.PageSize)
+		}
+	}
+	u := addQueryParams(fmt.Sprintf("/api/courses/%d/query-shtvu-subjects", courseID), query)
+	result := new(SHTVUSubjectsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetSHTVUSubjectTypesInfo returns the available subject-type counts for random import.
+func (s *Service) GetSHTVUSubjectTypesInfo(ctx context.Context, courseID int) (*SHTVUSubjectTypesInfoResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/shtvu-subject-types-info", courseID)
+	result := new(SHTVUSubjectTypesInfoResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ImportRandomExamSubjectsFromSHTVU imports randomly selected SHTVU subjects into an exam.
+func (s *Service) ImportRandomExamSubjectsFromSHTVU(ctx context.Context, examID int, body *ImportRandomSubjectsFromSHTVURequest) (*SubjectsResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/import-random-subjects-from-shtvu", examID)
+	result := new(SubjectsResponse)
+	_, err := s.client.Post(ctx, u, body, result)
+	return result, err
+}
+
+// ImportRandomClassroomSubjectsFromSHTVU imports randomly selected SHTVU subjects into a classroom.
+func (s *Service) ImportRandomClassroomSubjectsFromSHTVU(ctx context.Context, classroomID int, body *ImportRandomSubjectsFromSHTVURequest) (*SubjectsResponse, error) {
+	u := fmt.Sprintf("/api/classrooms/%d/import-random-subjects-from-shtvu", classroomID)
+	result := new(SubjectsResponse)
+	_, err := s.client.Post(ctx, u, body, result)
+	return result, err
+}
+
+// ImportVideoQuizSubjectsFromSHTVU imports selected SHTVU subjects into a video quiz.
+func (s *Service) ImportVideoQuizSubjectsFromSHTVU(ctx context.Context, videoQuizID int, body *ImportRandomSubjectsFromSHTVURequest) (*SubjectsResponse, error) {
+	u := fmt.Sprintf("/api/video-quizzes/%d/import-subjects-from-shtvu", videoQuizID)
+	result := new(SubjectsResponse)
+	_, err := s.client.Post(ctx, u, body, result)
 	return result, err
 }
 

@@ -64,6 +64,13 @@ func (s *Service) GetUserByID(ctx context.Context, userID int) (*UserProfile, er
 	return result, err
 }
 
+// UpdateNickname updates a user's nickname.
+func (s *Service) UpdateNickname(ctx context.Context, userID int, body UpdateNicknameRequest) error {
+	u := fmt.Sprintf("/api/user/%d/nickname", userID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
 // --- User Resources ---
 
 // ListResources returns the current user's uploaded resources.

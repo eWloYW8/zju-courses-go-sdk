@@ -5,6 +5,7 @@ import "encoding/json"
 type ExamSubmissionResponse = json.RawMessage
 type ExamScoreResponse = json.RawMessage
 type ClassroomExamResponse = json.RawMessage
+type ExamScoreDistributionResponse map[string]any
 
 type CourseExam struct {
 	ID    int    `json:"id"`

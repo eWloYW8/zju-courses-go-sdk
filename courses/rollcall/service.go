@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles rollcall-related API operations.
@@ -24,6 +24,14 @@ func (s *Service) GetRollcall(ctx context.Context, rollcallID int) (json.RawMess
 	u := fmt.Sprintf("/api/rollcall/%d", rollcallID)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// CreateRollcall creates a module rollcall activity.
+func (s *Service) CreateRollcall(ctx context.Context, courseID int, body *CreateRollcallRequest) (*CreateRollcallResponse, error) {
+	u := fmt.Sprintf("/api/module/%d/rollcall", courseID)
+	result := new(CreateRollcallResponse)
+	_, err := s.client.Post(ctx, u, body, result)
 	return result, err
 }
 

@@ -52,3 +52,7 @@ type ExamActivityReadLogResponse map[string]any
 type ClassinJoinURLResponse map[string]any
 
 type ClassinWebcastURLResponse map[string]any
+
+type ConvertedInteractionResponse struct {
+	ID int `json:"id"`
+}

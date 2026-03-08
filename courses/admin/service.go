@@ -1,13 +1,16 @@
 package admin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
+	"mime/multipart"
+	"net/http"
 	"net/url"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles organization and admin-related API operations.
@@ -52,6 +55,29 @@ func (s *Service) GetOrg(ctx context.Context, orgID int) (*model.OrgDetail, erro
 	return result, err
 }
 
+// GetOrgSetting returns organization settings for an organization.
+func (s *Service) GetOrgSetting(ctx context.Context, orgID int) (*OrgSettings, error) {
+	u := fmt.Sprintf("/api/orgs/%d/settings", orgID)
+	result := new(OrgSettings)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetLiveRecordOrgSetting returns live-record settings for an organization.
+func (s *Service) GetLiveRecordOrgSetting(ctx context.Context, orgID int) (*LiveRecordOrgSettings, error) {
+	u := fmt.Sprintf("/api/orgs/%d/live-record-settings", orgID)
+	result := new(LiveRecordOrgSettings)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateOrgSetting updates organization settings with the frontend form_type selector.
+func (s *Service) UpdateOrgSetting(ctx context.Context, orgID int, formType string, body UpdateOrgSettingRequest) error {
+	u := fmt.Sprintf("/api/orgs/%d/settings?form_type=%s", orgID, url.QueryEscape(formType))
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
 // GetCurrentOrg returns the current organization information.
 func (s *Service) GetCurrentOrg(ctx context.Context) (*model.OrgDetail, error) {
 	result := new(model.OrgDetail)
@@ -82,6 +108,13 @@ func (s *Service) ListAllOrgs(ctx context.Context) (json.RawMessage, error) {
 	return result, err
 }
 
+// ListAllOrgDetails returns the frontend /api/all-orgs wrapper with typed org entries.
+func (s *Service) ListAllOrgDetails(ctx context.Context) (*AllOrgsResponse, error) {
+	result := new(AllOrgsResponse)
+	_, err := s.client.Get(ctx, "/api/all-orgs", result)
+	return result, err
+}
+
 // ListOrgsByIDs returns organizations by repeated id query parameters.
 func (s *Service) ListOrgsByIDs(ctx context.Context, orgIDs []int) (json.RawMessage, error) {
 	values := url.Values{}
@@ -102,6 +135,35 @@ func (s *Service) GetPortalLogo(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, "/api/portal-logo", &result)
 	return result, err
+}
+
+// GetOrgPortalLogo returns the typed portal-logo payload used by the frontend.
+func (s *Service) GetOrgPortalLogo(ctx context.Context) (*PortalLogo, error) {
+	result := new(PortalLogo)
+	_, err := s.client.Get(ctx, "/api/portal-logo", result)
+	return result, err
+}
+
+// UpdateOrgPortalLogo updates the current portal logo using an upload id.
+func (s *Service) UpdateOrgPortalLogo(ctx context.Context, orgID, uploadID int) error {
+	u := fmt.Sprintf("/api/orgs/%d/portal-logo?upload_id=%d", orgID, uploadID)
+	_, err := s.client.Put(ctx, u, nil, nil)
+	return err
+}
+
+// GetAlertPopupSettings returns alert-popup settings for an organization.
+func (s *Service) GetAlertPopupSettings(ctx context.Context, orgID int) (*AlertPopupSettings, error) {
+	u := fmt.Sprintf("/api/orgs/%d/alert-popup", orgID)
+	result := new(AlertPopupSettings)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateAlertPopupSetting updates alert-popup settings for an organization.
+func (s *Service) UpdateAlertPopupSetting(ctx context.Context, orgID int, body UpdateAlertPopupSettingRequest) error {
+	u := fmt.Sprintf("/api/orgs/%d/alert-popup", orgID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
 }
 
 // --- Departments ---
@@ -437,6 +499,12 @@ func (s *Service) CopyCourse(ctx context.Context, body interface{}) (json.RawMes
 	return result, err
 }
 
+// CopyCourses posts the frontend bulk course-copy payload.
+func (s *Service) CopyCourses(ctx context.Context, body *CopyCourseRequest) error {
+	_, err := s.client.Post(ctx, "/api/course-copy/copy", body, nil)
+	return err
+}
+
 // ListCopyableCourses returns courses that can be copied.
 func (s *Service) ListCopyableCourses(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
@@ -444,11 +512,73 @@ func (s *Service) ListCopyableCourses(ctx context.Context) (json.RawMessage, err
 	return result, err
 }
 
+// ListCopyableCoursesWithQuery returns typed course-copy candidates using the frontend query shape.
+func (s *Service) ListCopyableCoursesWithQuery(ctx context.Context, query *CopyableCoursesQuery) (*CopyableCoursesResponse, error) {
+	params := map[string]string{}
+	if query != nil && query.Keyword != "" {
+		body, err := json.Marshal(map[string]string{"keyword": query.Keyword})
+		if err != nil {
+			return nil, err
+		}
+		params["conditions"] = string(body)
+	}
+	fields := "id,name,course_code"
+	if query != nil && query.Fields != "" {
+		fields = query.Fields
+	}
+	params["fields"] = fields
+
+	u := addQueryParams("/api/course-copy/courses", params)
+	result := new(CopyableCoursesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ImportCourseMoodlePackage imports a listed Moodle package into an existing course.
+func (s *Service) ImportCourseMoodlePackage(ctx context.Context, courseID int, body *MoodleImportRequest) error {
+	u := fmt.Sprintf("/api/course/%d/moodle/import", courseID)
+	_, err := s.client.Post(ctx, u, body, nil)
+	return err
+}
+
 // ImportMBZ imports a Moodle backup file.
 func (s *Service) ImportMBZ(ctx context.Context, body interface{}) (json.RawMessage, error) {
+	if req, ok := body.(*MBZImportRequest); ok && req != nil {
+		return nil, s.ImportMBZUpload(ctx, req.UploadID)
+	}
+	if req, ok := body.(MBZImportRequest); ok {
+		return nil, s.ImportMBZUpload(ctx, req.UploadID)
+	}
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, "/api/course/mbz/import", body, &result)
 	return result, err
+}
+
+// ImportMBZUpload submits the frontend multipart upload_id form used by /api/course/mbz/import.
+func (s *Service) ImportMBZUpload(ctx context.Context, uploadID int) error {
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	if err := writer.WriteField("upload_id", fmt.Sprintf("%d", uploadID)); err != nil {
+		return err
+	}
+	if err := writer.Close(); err != nil {
+		return err
+	}
+
+	reqURL, err := s.client.BaseURL().Parse("/api/course/mbz/import")
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL.String(), &buf)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Accept", "application/json")
+
+	_, err = s.client.Do(req, nil)
+	return err
 }
 
 // --- Authorization ---
@@ -473,6 +603,24 @@ func (s *Service) GetCourseAuthz(ctx context.Context, courseID int) (json.RawMes
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
+}
+
+// ListAssistantRoles returns assistant roles and their permissions for a course.
+func (s *Service) ListAssistantRoles(ctx context.Context, courseID int, fields string) (AssistantRolesResponse, error) {
+	if fields == "" {
+		fields = "id,name,alias,permissions"
+	}
+	u := fmt.Sprintf("/api/authz/courses/%d/assistant-roles?fields=%s", courseID, url.QueryEscape(fields))
+	result := make(AssistantRolesResponse, 0)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// UpdateAssistantRolePermissions updates assistant-role permission toggles for a course.
+func (s *Service) UpdateAssistantRolePermissions(ctx context.Context, courseID int, body *UpdateAssistantRolePermissionsRequest) error {
+	u := fmt.Sprintf("/api/authz/courses/%d/assistant-roles/permissions", courseID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
 }
 
 // --- Auth Code ---
@@ -579,10 +727,10 @@ func (s *Service) CheckLarkAuthorization(ctx context.Context) (json.RawMessage, 
 // --- Jobs ---
 
 // GetJob returns a background job status.
-func (s *Service) GetJob(ctx context.Context, jobID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/jobs/%d", jobID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+func (s *Service) GetJob(ctx context.Context, jobID int) (*JobStatusResponse, error) {
+	u := fmt.Sprintf("/api/jobs/%d/status", jobID)
+	result := new(JobStatusResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -590,6 +738,14 @@ func (s *Service) GetJob(ctx context.Context, jobID int) (json.RawMessage, error
 func (s *Service) GetLastTask(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, "/api/task/last?no-intercept=true", &result)
+	return result, err
+}
+
+// GetLastTasks returns typed task entries and supports the frontend type filter.
+func (s *Service) GetLastTasks(ctx context.Context, taskType string) ([]*LastTask, error) {
+	u := addQueryParams("/api/task/last?no-intercept=true", map[string]string{"type": taskType})
+	var result []*LastTask
+	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 

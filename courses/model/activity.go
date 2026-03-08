@@ -61,31 +61,33 @@ type RubricLevel struct {
 
 // Activity represents a course activity (homework, forum, material, exam, etc.)
 type Activity struct {
-	ID                              int         `json:"id"`
-	Title                           string      `json:"title"`
-	Type                            string      `json:"type"`
-	CourseID                        int         `json:"course_id,omitempty"`
-	ModuleID                        int         `json:"module_id,omitempty"`
-	SyllabusID                      int         `json:"syllabus_id,omitempty"`
-	Sort                            int         `json:"sort,omitempty"`
-	CreatedAt                       string      `json:"created_at,omitempty"`
-	UpdatedAt                       string      `json:"updated_at,omitempty"`
-	StartTime                       *string     `json:"start_time,omitempty"`
-	EndTime                         *string     `json:"end_time,omitempty"`
-	Description                     string      `json:"description,omitempty"`
-	Data                            interface{} `json:"data,omitempty"`
-	EnableEdit                      bool        `json:"enable_edit,omitempty"`
-	Published                       bool        `json:"published,omitempty"`
-	PublishTime                     *string     `json:"publish_time,omitempty"`
-	UniqueKey                       string      `json:"unique_key,omitempty"`
-	TeachingModel                   string      `json:"teaching_model,omitempty"`
-	TeachingUnitID                  int         `json:"teaching_unit_id,omitempty"`
-	UsingPhase                      string      `json:"using_phase,omitempty"`
-	Version                         *int        `json:"version,omitempty"`
-	ImportedFrom                    *string     `json:"imported_from,omitempty"`
-	ImportedTrackID                 *string     `json:"imported_track_id,omitempty"`
-	ReferrerID                      int         `json:"referrer_id,omitempty"`
-	ReferrerType                    string      `json:"referrer_type,omitempty"`
+	ID              int         `json:"id"`
+	Title           string      `json:"title"`
+	Type            string      `json:"type"`
+	CourseID        int         `json:"course_id,omitempty"`
+	ModuleID        int         `json:"module_id,omitempty"`
+	SyllabusID      int         `json:"syllabus_id,omitempty"`
+	Sort            int         `json:"sort,omitempty"`
+	CreatedAt       string      `json:"created_at,omitempty"`
+	UpdatedAt       string      `json:"updated_at,omitempty"`
+	StartTime       *string     `json:"start_time,omitempty"`
+	EndTime         *string     `json:"end_time,omitempty"`
+	Description     string      `json:"description,omitempty"`
+	Data            interface{} `json:"data,omitempty"`
+	EnableEdit      bool        `json:"enable_edit,omitempty"`
+	Published       bool        `json:"published,omitempty"`
+	PublishTime     *string     `json:"publish_time,omitempty"`
+	UniqueKey       string      `json:"unique_key,omitempty"`
+	TeachingModel   string      `json:"teaching_model,omitempty"`
+	TeachingUnitID  int         `json:"teaching_unit_id,omitempty"`
+	UsingPhase      string      `json:"using_phase,omitempty"`
+	Version         *int        `json:"version,omitempty"`
+	ImportedFrom    *string     `json:"imported_from,omitempty"`
+	ImportedTrackID *string     `json:"imported_track_id,omitempty"`
+	ReferrerID      int         `json:"referrer_id,omitempty"`
+	ReferrerType    string      `json:"referrer_type,omitempty"`
+	ModuleName      string      `json:"module_name,omitempty"`
+	SyllabusName    string      `json:"syllabus_name,omitempty"`
 
 	// Group assignment
 	GroupSetID       int         `json:"group_set_id,omitempty"`
@@ -121,13 +123,13 @@ type Activity struct {
 	IsScorePublic      bool     `json:"is_score_public,omitempty"`
 
 	// Answer/Score announcement
-	AnnounceAnswerStatus             string  `json:"announce_answer_status,omitempty"`
-	AnnounceAnswerType               string  `json:"announce_answer_type,omitempty"`
-	AnnounceAnswerTime               *string `json:"announce_answer_time,omitempty"`
-	AnnounceScoreStatus              string  `json:"announce_score_status,omitempty"`
-	AnnounceScoreTime                *string `json:"announce_score_time,omitempty"`
-	IsAnswerAnnounced                bool    `json:"is_answer_announced,omitempty"`
-	AnnounceAnswerAndExplanation     *bool   `json:"announce_answer_and_explanation,omitempty"`
+	AnnounceAnswerStatus         string  `json:"announce_answer_status,omitempty"`
+	AnnounceAnswerType           string  `json:"announce_answer_type,omitempty"`
+	AnnounceAnswerTime           *string `json:"announce_answer_time,omitempty"`
+	AnnounceScoreStatus          string  `json:"announce_score_status,omitempty"`
+	AnnounceScoreTime            *string `json:"announce_score_time,omitempty"`
+	IsAnswerAnnounced            bool    `json:"is_answer_announced,omitempty"`
+	AnnounceAnswerAndExplanation *bool   `json:"announce_answer_and_explanation,omitempty"`
 
 	// Rubric
 	RubricID              int             `json:"rubric_id,omitempty"`
@@ -149,13 +151,13 @@ type Activity struct {
 	IsResubmitOpen           bool           `json:"is_resubmit_open,omitempty"`
 
 	// Status flags
-	IsStarted                               bool `json:"is_started,omitempty"`
-	IsClosed                                bool `json:"is_closed,omitempty"`
-	IsInProgress                            bool `json:"is_in_progress,omitempty"`
-	IsOpenedCatalog                         bool `json:"is_opened_catalog,omitempty"`
-	IsAnnounceReferenceAnswerTimePassed     bool `json:"is_announce_reference_answer_time_passed,omitempty"`
-	IsAnnounceScoreTimePassed               bool `json:"is_announce_score_time_passed,omitempty"`
-	IsAnnounceAnswerTimePassed              bool `json:"is_announce_answer_time_passed,omitempty"`
+	IsStarted                           bool `json:"is_started,omitempty"`
+	IsClosed                            bool `json:"is_closed,omitempty"`
+	IsInProgress                        bool `json:"is_in_progress,omitempty"`
+	IsOpenedCatalog                     bool `json:"is_opened_catalog,omitempty"`
+	IsAnnounceReferenceAnswerTimePassed bool `json:"is_announce_reference_answer_time_passed,omitempty"`
+	IsAnnounceScoreTimePassed           bool `json:"is_announce_score_time_passed,omitempty"`
+	IsAnnounceAnswerTimePassed          bool `json:"is_announce_answer_time_passed,omitempty"`
 
 	// Counts
 	ForumCount          int `json:"forum_count,omitempty"`
@@ -218,4 +220,3 @@ type SubjectsRule struct {
 	ShuffleSubjectsRandomly bool `json:"shuffle_subjects_randomly,omitempty"`
 	SubSubjectsRandomly     bool `json:"sub_subjects_randomly,omitempty"`
 }
-

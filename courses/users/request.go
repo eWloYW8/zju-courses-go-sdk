@@ -2,6 +2,10 @@ package users
 
 type UpdateProfileRequest map[string]any
 
+type UpdateNicknameRequest struct {
+	Nickname string `json:"nickname,omitempty"`
+}
+
 type SearchUserParams struct {
 	Keywords           string
 	ExcludeStudentRole bool

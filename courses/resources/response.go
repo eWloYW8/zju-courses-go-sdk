@@ -1,6 +1,10 @@
 package resources
 
-import "github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+import (
+	"encoding/json"
+
+	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+)
 
 type ResourceGroupsResponse struct {
 	ResourceGroups []*ResourceGroup `json:"resource_groups"`
@@ -21,6 +25,16 @@ type ResourceGroupResourcesResponse struct {
 
 type ResourceGroupMembersResponse struct {
 	Members []*model.User `json:"members"`
+	model.Pagination
+}
+
+type ResourceGroupRubricsResponse struct {
+	Rubrics []json.RawMessage `json:"rubrics"`
+	model.Pagination
+}
+
+type ResourceGroupSubjectLibsResponse struct {
+	SubjectLibs []json.RawMessage `json:"subject_libs"`
 	model.Pagination
 }
 

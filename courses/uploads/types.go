@@ -6,6 +6,11 @@ type Upload = model.Upload
 
 type UploadReference = model.UploadReference
 
+// UploadPDFInfo represents the preview PDF metadata used by the AI quiz flow.
+type UploadPDFInfo struct {
+	NumPages int `json:"num_pages,omitempty"`
+}
+
 // SCORMCMIData represents SCORM CMI learner data.
 type SCORMCMIData struct {
 	CMI            any `json:"cmi"`

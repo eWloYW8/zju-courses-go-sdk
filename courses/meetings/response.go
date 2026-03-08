@@ -30,3 +30,7 @@ type VTRSMeetingClassificationsResponse struct {
 type VTRSResourceClassificationsResponse struct {
 	Classifications []*VTRSResourceClassification `json:"classifications"`
 }
+
+type RoomLocationsResponse struct {
+	Rooms []*RoomLocation `json:"rooms"`
+}

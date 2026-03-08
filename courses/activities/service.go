@@ -284,11 +284,30 @@ func (s *Service) RemoveAllDependants(ctx context.Context, activityID int, activ
 // --- Activity Lock Status ---
 
 // CheckIsLocked checks if activities are locked.
-// activityConditions format: "activityID1,activityID2,..."
+// activityConditions should be the JSON-encoded frontend payload used by
+// `/api/activities/is-locked`, for example:
+// `[{"activity_id":1,"course_id":2,"activity_type":"homework"}]`.
 func (s *Service) CheckIsLocked(ctx context.Context, activityConditions string) (map[string]*IsLockedStatus, error) {
 	u := fmt.Sprintf("/api/activities/is-locked?activity_conditions=%s", activityConditions)
 	result := make(map[string]*IsLockedStatus)
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// CheckIsLockedWithConditions checks lock state using structured activity conditions.
+func (s *Service) CheckIsLockedWithConditions(ctx context.Context, conditions []*ActivityLockCondition) (map[string]*IsLockedStatus, error) {
+	body, err := json.Marshal(conditions)
+	if err != nil {
+		return nil, err
+	}
+	return s.CheckIsLocked(ctx, string(body))
+}
+
+// ConvertOnlineVideoToInteraction converts an online-video activity into an interaction activity.
+func (s *Service) ConvertOnlineVideoToInteraction(ctx context.Context, activityID int) (*ConvertedInteractionResponse, error) {
+	u := fmt.Sprintf("/api/online-videos/%d/convert-to-interaction", activityID)
+	result := new(ConvertedInteractionResponse)
+	_, err := s.client.Post(ctx, u, nil, result)
 	return result, err
 }
 
