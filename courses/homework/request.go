@@ -37,3 +37,14 @@ type MarkedSubmittedRequest struct {
 	MarkedSubmitted   int      `json:"marked_submitted"`
 	SubmittedStatus   []string `json:"submittedStatus,omitempty"`
 }
+
+type ListSubmissionRecordsParams struct {
+	NeedUploadsSize *bool `json:"-"`
+	UserIDs         []int `json:"-"`
+}
+
+type MarkHomeworkSubmissionToRedoRequest struct {
+	SubmissionID int `json:"submission_id,omitempty"`
+	StudentID    int `json:"student_id,omitempty"`
+	GroupID      int `json:"group_id,omitempty"`
+}

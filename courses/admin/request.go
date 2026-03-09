@@ -8,9 +8,17 @@ type CopyCourseRequest struct {
 	CourseIDs []int `json:"course_ids"`
 }
 
+type RequestChangePlanRequest struct {
+	Period string `json:"period"`
+}
+
 type ChangeEnrollmentRoleRequest struct {
 	Role   string `json:"role"`
 	RoleID *int   `json:"role_id,omitempty"`
+}
+
+type UpdateUserDepartmentRequest struct {
+	DepartmentID int `json:"department_id"`
 }
 
 type UpdateAssistantRolePermissionsRequest struct {
@@ -31,4 +39,8 @@ type ListUsersForManagementParams struct {
 	IgnoreAvatar    bool
 	ForManagement   bool
 	NeedAIActivated bool
+}
+
+type SaveOutlineRequiredOptionsRequest struct {
+	RequiredOptions []string `json:"required_options,omitempty"`
 }

@@ -22,7 +22,11 @@ type UpdateCoursewareQuizSubjectsRequest struct {
 type CoursewareQuizSubjectsRequest = UpdateCoursewareQuizSubjectsRequest
 
 type GenerateCoursewareQuizSubjectsRequest struct {
-	UploadReferenceID      int      `json:"upload_reference_id"`
+	UploadID               int      `json:"upload_id,omitempty"`
+	UploadReferenceID      int      `json:"upload_reference_id,omitempty"`
+	ModuleID               int      `json:"module_id,omitempty"`
+	ModuleType             string   `json:"module_type,omitempty"`
+	GroupID                string   `json:"group_id,omitempty"`
 	NumOfSingleSelection   int      `json:"num_of_single_selection,omitempty"`
 	NumOfMultipleSelection int      `json:"num_of_multiple_selection,omitempty"`
 	NumOfFillInBlank       int      `json:"num_of_fill_in_blank,omitempty"`
@@ -33,6 +37,13 @@ type GenerateCoursewareQuizSubjectsRequest struct {
 	Locale                 string   `json:"locale,omitempty"`
 	Stream                 bool     `json:"stream,omitempty"`
 	PageRange              []int    `json:"page_range,omitempty"`
+}
+
+type GenerateSubjectsRequest = GenerateCoursewareQuizSubjectsRequest
+
+type GenerateSubjectsByTextRequest struct {
+	TextContent string `json:"text_content"`
+	GenerateCoursewareQuizSubjectsRequest
 }
 
 type UpdateExamSubjectExplanationRequest struct {
@@ -63,4 +74,11 @@ type SHTVURandomImportItem struct {
 type ImportRandomSubjectsFromSHTVURequest struct {
 	Items     []*SHTVURandomImportItem `json:"items"`
 	Timestamp string                   `json:"timestamp,omitempty"`
+}
+
+type SubjectGroupRequest struct {
+	SubjectType  string `json:"subject_type,omitempty"`
+	ReferrerType string `json:"referrer_type,omitempty"`
+	ReferrerID   int    `json:"referrer_id,omitempty"`
+	Sort         int    `json:"sort,omitempty"`
 }

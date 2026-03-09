@@ -20,6 +20,17 @@ type UpdateNavSettingRequest struct {
 	NavSetting []*NavSetting `json:"nav_setting"`
 }
 
+type UpsertOutlineItemRequest struct {
+	ID                int    `json:"id,omitempty"`
+	Key               string `json:"key,omitempty"`
+	Title             string `json:"title,omitempty"`
+	Description       string `json:"description,omitempty"`
+	CourseID          int    `json:"course_id,omitempty"`
+	SendMessage       bool   `json:"send_message,omitempty"`
+	Uploads           []int  `json:"uploads,omitempty"`
+	AllowDownloadData []int  `json:"allow_download_data,omitempty"`
+}
+
 type CreateModuleRequest = Module
 
 type UpdateModuleRequest = Module
@@ -101,6 +112,45 @@ type UpdateAssistantPermissionsRequest struct {
 	InstructorAssistant map[string]bool       `json:"instructor_assistant,omitempty"`
 	StudentAssistant    map[string]bool       `json:"student_assistant,omitempty"`
 	ChangedPermissions  *AssistantPermissions `json:"changed_permissions,omitempty"`
+}
+
+type StudentsPerformanceParams struct {
+	Page             int
+	PageSize         int
+	Conditions       any
+	OnlyStudentsName bool
+	IsOriginalScore  *bool
+}
+
+type UpdateStudentPerformanceScoreRequest struct {
+	StudentID int `json:"student_id"`
+	Score     any `json:"score,omitempty"`
+}
+
+type CourseAdvanceSettingRequest struct {
+	Params map[string]any `json:"params,omitempty"`
+}
+
+type ActivityScorePercentageItem struct {
+	ID              int    `json:"id"`
+	Type            string `json:"type,omitempty"`
+	ScorePercentage any    `json:"score_percentage,omitempty"`
+	Metrics         any    `json:"metrics,omitempty"`
+}
+
+type CustomScorePercentageItem struct {
+	ID         int `json:"id"`
+	Percentage any `json:"percentage,omitempty"`
+	Metrics    any `json:"metrics,omitempty"`
+}
+
+type UpdateScorePercentagesRequest struct {
+	ActivityScorePercentages               []*ActivityScorePercentageItem `json:"activity_score_percentages,omitempty"`
+	CustomScorePercentages                 []*CustomScorePercentageItem   `json:"custom_score_percentages,omitempty"`
+	RollcallScorePercentage                any                            `json:"rollcall_score_percentage,omitempty"`
+	PerformanceScorePercentage             any                            `json:"performance_score_percentage,omitempty"`
+	OnlineVideoCompletenessScorePercentage any                            `json:"online_video_completeness_score_percentage,omitempty"`
+	OnlineVideoOBEMetrics                  any                            `json:"online_video_obe_metrics,omitempty"`
 }
 
 type CancelBlueprintActivitySyncRequest struct {

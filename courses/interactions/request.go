@@ -16,3 +16,7 @@ type InteractionSubmissionAnswer struct {
 type UpdateInteractionSubmissionRequest struct {
 	Subjects []*InteractionSubmissionAnswer `json:"subjects,omitempty"`
 }
+
+type UpdateInteractionScoreRequest map[string]any
+
+type UpdateInteractionVoteRequest map[string]any

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/activities"
 	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
@@ -29,10 +31,60 @@ func (s *Service) GetHomeworkScore(ctx context.Context, activityID, studentID in
 	return result, err
 }
 
+// GetGroupHomeworkScore returns the homework score for a group.
+func (s *Service) GetGroupHomeworkScore(ctx context.Context, activityID, groupID int) (*HomeworkScore, error) {
+	u := fmt.Sprintf("/api/activities/%d/groups/%d/scores", activityID, groupID)
+	result := new(HomeworkScore)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // ListSubmissions returns submissions for a student on a homework activity.
 func (s *Service) ListSubmissions(ctx context.Context, activityID, studentID int) (*SubmissionListResponse, error) {
 	u := fmt.Sprintf("/api/activities/%d/students/%d/submission_list", activityID, studentID)
 	result := new(SubmissionListResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetStudentSubmission returns the current submission detail for a student on a homework activity.
+func (s *Service) GetStudentSubmission(ctx context.Context, activityID, studentID int) (*Submission, error) {
+	u := fmt.Sprintf("/api/course/activities/%d/students/%d/submission", activityID, studentID)
+	result := new(Submission)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListGroupSubmissions returns submissions for a group on a homework activity.
+func (s *Service) ListGroupSubmissions(ctx context.Context, activityID, groupID int) (*SubmissionListResponse, error) {
+	u := fmt.Sprintf("/api/activities/%d/groups/%d/submission_list", activityID, groupID)
+	result := new(SubmissionListResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetGroupSubmission returns the current submission detail for a group on a homework activity.
+func (s *Service) GetGroupSubmission(ctx context.Context, activityID, groupID int) (*Submission, error) {
+	u := fmt.Sprintf("/api/activities/%d/groups/%d/submission", activityID, groupID)
+	result := new(Submission)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListStudentSubmissionRecords returns instructor-facing student submissions for a homework activity.
+func (s *Service) ListStudentSubmissionRecords(ctx context.Context, homeworkID int, params *ListSubmissionRecordsParams) (*SubmissionRecordsResponse, error) {
+	u := fmt.Sprintf("/api/homework/%d/student-submissions", homeworkID)
+	u = addHomeworkQueryParams(u, params)
+	result := new(SubmissionRecordsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListGroupSubmissionRecords returns instructor-facing group submissions for a homework activity.
+func (s *Service) ListGroupSubmissionRecords(ctx context.Context, homeworkID int, needUploadsSize bool) (*SubmissionRecordsResponse, error) {
+	u := fmt.Sprintf("/api/homework/%d/group-submissions", homeworkID)
+	u = addHomeworkQueryParams(u, &ListSubmissionRecordsParams{NeedUploadsSize: &needUploadsSize})
+	result := new(SubmissionRecordsResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
@@ -50,6 +102,24 @@ func (s *Service) GetResubmitRecord(ctx context.Context, activityID, studentID i
 	u := fmt.Sprintf("/api/homework/%d/students/%d/resubmit-record", activityID, studentID)
 	result := make(ResubmitRecordResponse)
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListMakeUpRecords returns make-up records for a homework activity.
+func (s *Service) ListMakeUpRecords(ctx context.Context, homeworkID int, userIDs []int) (*MakeUpRecordsResponse, error) {
+	u := fmt.Sprintf("/api/homework/%d/make-up-records", homeworkID)
+	u = addUserIDsQuery(u, userIDs)
+	result := new(MakeUpRecordsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListResubmitRecords returns resubmit records for a homework activity.
+func (s *Service) ListResubmitRecords(ctx context.Context, homeworkID int, userIDs []int) (*ResubmitRecordsResponse, error) {
+	u := fmt.Sprintf("/api/homework/%d/resubmit-records", homeworkID)
+	u = addUserIDsQuery(u, userIDs)
+	result := new(ResubmitRecordsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -74,17 +144,23 @@ func (s *Service) UpdateSubmission(ctx context.Context, submissionID int, body *
 // ListMarkedAttachments returns marked attachments for a submission.
 func (s *Service) ListMarkedAttachments(ctx context.Context, submissionID int) (MarkedAttachmentsResponse, error) {
 	u := fmt.Sprintf("/api/submissions/%d/marked_attachments", submissionID)
-	result := make(MarkedAttachmentsResponse)
-	_, err := s.client.Get(ctx, u, &result)
-	return result, err
+	result := new(MarkedAttachmentsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	if err != nil {
+		return MarkedAttachmentsResponse{}, err
+	}
+	return *result, nil
 }
 
 // GetMarkedAttachment returns a marked attachment for a submission.
 func (s *Service) GetMarkedAttachment(ctx context.Context, submissionID, attachmentID int) (MarkedAttachmentResponse, error) {
 	u := fmt.Sprintf("/api/submissions/%d/marked_attachments/%d", submissionID, attachmentID)
-	result := make(MarkedAttachmentResponse)
-	_, err := s.client.Get(ctx, u, &result)
-	return result, err
+	result := new(MarkedAttachmentResponse)
+	_, err := s.client.Get(ctx, u, result)
+	if err != nil {
+		return MarkedAttachmentResponse{}, err
+	}
+	return *result, nil
 }
 
 // RecommendSubmission marks submissions as recommended.
@@ -150,9 +226,90 @@ func (s *Service) ListInterScoreSubmissions(ctx context.Context, activityID int)
 
 // ListInterScores returns inter-review scores.
 func (s *Service) ListInterScores(ctx context.Context, activityID int) ([]InterScore, error) {
-	u := fmt.Sprintf("/api/inter-scores/%d", activityID)
+	u := fmt.Sprintf("/api/homework/%d/inter-scores", activityID)
 	var result []InterScore
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListIntraScores returns intra-review scores.
+func (s *Service) ListIntraScores(ctx context.Context, activityID int) ([]InterScore, error) {
+	u := fmt.Sprintf("/api/homework/%d/intra-scores", activityID)
+	var result []InterScore
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListInterScoresByUserIDs returns inter-review scores filtered by student IDs.
+func (s *Service) ListInterScoresByUserIDs(ctx context.Context, activityID int, userIDs []int) ([]InterScore, error) {
+	u := addUserIDsQuery(fmt.Sprintf("/api/homework/%d/inter-scores", activityID), userIDs)
+	var result []InterScore
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListIntraScoreRules returns intra-review rules for an activity.
+func (s *Service) ListIntraScoreRules(ctx context.Context, activityID int, userIDs []int) (*IntraScoreRulesResponse, error) {
+	u := addUserIDsQuery(fmt.Sprintf("/api/activities/%d/intra-score-rules", activityID), userIDs)
+	result := new(IntraScoreRulesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListHomeworkScores returns homework scores for an activity.
+func (s *Service) ListHomeworkScores(ctx context.Context, activityID int, userIDs []int) (*HomeworkScoresResponse, error) {
+	u := addUserIDsQuery(fmt.Sprintf("/api/activities/%d/homework-scores", activityID), userIDs)
+	result := new(HomeworkScoresResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListRecommendSubmissions returns recommended submissions for an activity.
+func (s *Service) ListRecommendSubmissions(ctx context.Context, activityID int) (*RecommendSubmissionsResponse, error) {
+	u := fmt.Sprintf("/api/activities/%d/recommend-submissions", activityID)
+	result := new(RecommendSubmissionsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetLogsByType returns homework logs of the requested type.
+func (s *Service) GetLogsByType(ctx context.Context, homeworkID int, logType string) (*HomeworkLogsResponse, error) {
+	u := sdk.AddQueryParams(fmt.Sprintf("/api/homeworks/%d/logs", homeworkID), map[string]string{"log_type": logType})
+	result := new(HomeworkLogsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetStudentHomeworkRedoMap returns redo counts keyed by student/group ID.
+func (s *Service) GetStudentHomeworkRedoMap(ctx context.Context, homeworkID int) (*RedoMapResponse, error) {
+	u := fmt.Sprintf("/api/homework/%d/redo-map", homeworkID)
+	result := new(RedoMapResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// MarkHomeworkSubmissionToRedo marks homework submissions for redo.
+func (s *Service) MarkHomeworkSubmissionToRedo(ctx context.Context, activityID int, body *MarkHomeworkSubmissionToRedoRequest) error {
+	u := fmt.Sprintf("/api/course/activities/%d/submission/redo", activityID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// GetHomeworkDuplicateRate returns duplicate-detection rates for selected targets.
+func (s *Service) GetHomeworkDuplicateRate(ctx context.Context, homeworkID int, targetIDs []int) (*DuplicateDetectRatesResponse, error) {
+	u := sdk.AddQueryParams(fmt.Sprintf("/api/homework/%d/duplicate-detect/rate", homeworkID), map[string]string{
+		"target_ids": intsToCSV(targetIDs),
+	})
+	result := new(DuplicateDetectRatesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetHomeworkDuplicateRateWithSubmissionID returns duplicate-detection rates for a single submission.
+func (s *Service) GetHomeworkDuplicateRateWithSubmissionID(ctx context.Context, submissionID int) (*DuplicateDetectRatesResponse, error) {
+	u := fmt.Sprintf("/api/homework/submission/%d/duplicate-detect-rate", submissionID)
+	result := new(DuplicateDetectRatesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -166,9 +323,12 @@ func (s *Service) GetInProgressHomeworks(ctx context.Context) ([]InProgressHomew
 // GetHomeworksSubmissionStatus returns homework submission statuses across courses.
 func (s *Service) GetHomeworksSubmissionStatus(ctx context.Context, courseID int) (HomeworksSubmissionStatusResponse, error) {
 	u := fmt.Sprintf("/api/courses/homeworks-submission-status?no-intercept=true&course_id=%d", courseID)
-	result := make(HomeworksSubmissionStatusResponse)
-	_, err := s.client.Get(ctx, u, &result)
-	return result, err
+	result := new(HomeworksSubmissionStatusResponse)
+	_, err := s.client.Get(ctx, u, result)
+	if err != nil {
+		return HomeworksSubmissionStatusResponse{}, err
+	}
+	return *result, nil
 }
 
 // DownloadHomeworkZip checks the status of a homework zip download.
@@ -177,4 +337,41 @@ func (s *Service) DownloadHomeworkZip(ctx context.Context, activityID int) (Home
 	result := make(HomeworkZipStatusResponse)
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
+}
+
+func addHomeworkQueryParams(urlStr string, params *ListSubmissionRecordsParams) string {
+	query := map[string]string{}
+	if params != nil {
+		if params.NeedUploadsSize != nil {
+			query["need_uploads_size"] = strconv.FormatBool(*params.NeedUploadsSize)
+		}
+		if len(params.UserIDs) > 0 {
+			if payload, err := json.Marshal(params.UserIDs); err == nil {
+				query["user_ids"] = string(payload)
+			}
+		}
+	}
+	return sdk.AddQueryParams(urlStr, query)
+}
+
+func addUserIDsQuery(urlStr string, userIDs []int) string {
+	if len(userIDs) == 0 {
+		return urlStr
+	}
+	payload, err := json.Marshal(userIDs)
+	if err != nil {
+		return urlStr
+	}
+	return sdk.AddQueryParams(urlStr, map[string]string{"user_ids": string(payload)})
+}
+
+func intsToCSV(ids []int) string {
+	if len(ids) == 0 {
+		return ""
+	}
+	values := make([]string, len(ids))
+	for i, id := range ids {
+		values[i] = strconv.Itoa(id)
+	}
+	return strings.Join(values, ",")
 }

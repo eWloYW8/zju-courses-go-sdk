@@ -6,6 +6,10 @@ type UploadReferencesResponse struct {
 	References []*model.UploadReference `json:"references"`
 }
 
+type CourseActivitiesResponse struct {
+	Activities []*Activity `json:"activities"`
+}
+
 type CommentsResponse struct {
 	Comments []*Comment `json:"comments"`
 	model.Pagination
@@ -13,6 +17,13 @@ type CommentsResponse struct {
 
 type CommentPageCountResponse struct {
 	PageStats []CommentPageStat `json:"page_stats"`
+}
+
+type ScoreRecordsResponse struct {
+	Records []*ScoreRecord `json:"records"`
+	model.Pagination
+	Start int `json:"start,omitempty"`
+	End   int `json:"end,omitempty"`
 }
 
 type RecommendSubmissionsResponse struct {
@@ -48,10 +59,6 @@ type CommentPageStat struct {
 }
 
 type ExamActivityReadLogResponse map[string]any
-
-type ClassinJoinURLResponse map[string]any
-
-type ClassinWebcastURLResponse map[string]any
 
 type ConvertedInteractionResponse struct {
 	ID int `json:"id"`

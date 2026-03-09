@@ -103,3 +103,110 @@ func TestListSharedResourcesWithParamsUsesFrontendQueryAndModels(t *testing.T) {
 		t.Fatalf("percentage/course_code did not decode: %#v", resource)
 	}
 }
+
+func TestHomepageResourceHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/anonymous-api/shared-resource/classifications":
+			_, _ = w.Write([]byte(`{"classifications":[{"id":1,"name":"精选","parent_id":0}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/anonymous-api/departments":
+			if got := r.URL.Query().Get("fields"); got != "id,name,code,parent_id,stopped,short_name,is_show_on_homepage,cover" {
+				t.Fatalf("unexpected department fields: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"departments":[{"id":2,"name":"计算机学院","code":"CS","parent_id":0,"is_show_on_homepage":true}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/anonymous-api/departments/show-on-homepage":
+			_, _ = w.Write([]byte(`{"departments":[{"id":3,"name":"数学学院"}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/anonymous-api/shared-resources":
+			if r.URL.Query().Get("no-intercept") == "true" {
+				conditions, err := url.QueryUnescape(r.URL.Query().Get("conditions"))
+				if err != nil {
+					t.Fatalf("unescape homepage conditions: %v", err)
+				}
+				if conditions != `{"classification":9,"department":5,"order_by":"view_count","parent_id":0}` {
+					t.Fatalf("unexpected homepage conditions: %s", conditions)
+				}
+				_, _ = w.Write([]byte(`{"resources":[{"id":8,"name":"首页资源"}]}`))
+				return
+			}
+			if got := r.URL.Query().Get("page"); got != "2" {
+				t.Fatalf("unexpected search page: %q", got)
+			}
+			if got := r.URL.Query().Get("page_size"); got != "6" {
+				t.Fatalf("unexpected search page_size: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"resources":[{"id":9,"name":"搜索资源"}],"page":2,"page_size":6,"pages":3,"total":15}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/anonymous-api/shared-resources/most-liked":
+			if got := r.URL.Query().Get("conditions"); got != `{"keyword":"AI"}` {
+				t.Fatalf("unexpected most-liked conditions: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"resources":[{"id":10,"name":"最受欢迎"}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/anonymous-api/shared-resources/recent-used":
+			if got := r.URL.Query().Get("classificationId"); got != "12" {
+				t.Fatalf("unexpected classificationId: %q", got)
+			}
+			if got := r.URL.Query().Get("departmentIds"); got != "5,6" {
+				t.Fatalf("unexpected departmentIds: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"resources":[{"id":11,"name":"最近使用"}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/subject-libs/folders":
+			if got := r.URL.Query().Get("parent_id"); got != "0" {
+				t.Fatalf("unexpected parent_id: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"folders":[{"id":4,"name":"根目录","has_sub_folder":true}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/anonymous-api/subject-libs/7":
+			_, _ = w.Write([]byte(`{"id":7,"title":"期末题库","type":"folder","parent_id":0}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	classifications, err := service.ListSharedResourceClassificationsWithPrefix(ctx, true)
+	if err != nil || len(classifications.Classifications) != 1 || classifications.Classifications[0].Name != "精选" {
+		t.Fatalf("unexpected classifications: %#v, err=%v", classifications, err)
+	}
+
+	departments, err := service.ListDepartmentsWithPrefix(ctx, true, "id,name,code,parent_id,stopped,short_name,is_show_on_homepage,cover")
+	if err != nil || len(departments.Departments) != 1 || departments.Departments[0].Code == nil || *departments.Departments[0].Code != "CS" {
+		t.Fatalf("unexpected departments: %#v, err=%v", departments, err)
+	}
+
+	homepageDepartments, err := service.ListHomepageDepartmentsWithPrefix(ctx, true)
+	if err != nil || len(homepageDepartments.Departments) != 1 || homepageDepartments.Departments[0].Name != "数学学院" {
+		t.Fatalf("unexpected homepage departments: %#v, err=%v", homepageDepartments, err)
+	}
+
+	homepageResources, err := service.ListHomepageSharedResources(ctx, true, ListHomepageSharedResourcesParams{DepartmentID: 5, ClassificationID: 9})
+	if err != nil || len(homepageResources.Resources) != 1 || homepageResources.Resources[0].Name != "首页资源" {
+		t.Fatalf("unexpected homepage resources: %#v, err=%v", homepageResources, err)
+	}
+
+	searchResult, err := service.SearchSharedResourcesWithPrefix(ctx, true, ListSharedResourcesParams{Page: 2, PageSize: 6, Conditions: `{"keyword":"AI"}`})
+	if err != nil || len(searchResult.Resources) != 1 || searchResult.Resources[0].ID != 9 {
+		t.Fatalf("unexpected search result: %#v, err=%v", searchResult, err)
+	}
+
+	mostLiked, err := service.ListMostLikedSharedResourcesWithPrefix(ctx, true, `{"keyword":"AI"}`)
+	if err != nil || len(mostLiked.Resources) != 1 || mostLiked.Resources[0].ID != 10 {
+		t.Fatalf("unexpected most-liked result: %#v, err=%v", mostLiked, err)
+	}
+
+	recentUsed, err := service.ListRecentUsedSharedResourcesWithPrefix(ctx, true, ListRecentUsedSharedResourcesParams{ClassificationID: "12", DepartmentIDs: "5,6"})
+	if err != nil || len(recentUsed.Resources) != 1 || recentUsed.Resources[0].ID != 11 {
+		t.Fatalf("unexpected recent-used result: %#v, err=%v", recentUsed, err)
+	}
+
+	folders, err := service.ListSubjectLibFolders(context.Background(), 0)
+	if err != nil || len(folders.Folders) != 1 || folders.Folders[0].Name != "根目录" || !folders.Folders[0].HasSubFolder {
+		t.Fatalf("unexpected folders: %#v, err=%v", folders, err)
+	}
+
+	subjectLib, err := service.GetSubjectLibWithPrefix(ctx, true, 7)
+	if err != nil || subjectLib.Title != "期末题库" {
+		t.Fatalf("unexpected subject lib: %#v, err=%v", subjectLib, err)
+	}
+}

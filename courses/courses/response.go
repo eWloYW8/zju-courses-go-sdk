@@ -9,6 +9,10 @@ import (
 
 type OutlineResponse = Outline
 
+type OutlineItemResponse struct {
+	CourseOutlineItem *OutlineField `json:"course_outline_item,omitempty"`
+}
+
 type MyCoursesResponse struct {
 	Courses []*Course `json:"courses"`
 	model.Pagination
@@ -98,6 +102,26 @@ type EntryRecordResponse map[string]any
 
 type OnlineVideoCompletenessSettingResponse map[string]any
 
+type PerformanceScoreSettingResponse map[string]any
+
+type StudentsPerformanceResponse map[string]any
+
+type ScorePercentagesResponse map[string]any
+
+type StudentSelfScoreResponse map[string]any
+
+type RollcallScoreResponse map[string]any
+
+type PerformanceScoreResponse map[string]any
+
+type ScoreDistributionResponse map[string]any
+
+type ScoreTypeSettingsResponse map[string]any
+
+type OnlineVideoCompletenessScoresResponse map[string]any
+
+type OnlineVideoCompletenessScoreResponse map[string]any
+
 type CourseListResponse map[string]any
 
 type CourseCountResponse map[string]any
@@ -109,6 +133,10 @@ type BlueprintSubItemsResultResponse map[string]any
 type BlueprintSubmittedInfoResponse struct {
 	UnableSync []*BlueprintSubmittedInfo `json:"unable_sync,omitempty"`
 	NeedSync   []*BlueprintSubmittedInfo `json:"need_sync,omitempty"`
+}
+
+type CourseClassificationsResponse struct {
+	Classifications []*CourseClassification `json:"classifications"`
 }
 
 type CourseAuditReferencesResponse struct {

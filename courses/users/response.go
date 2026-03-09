@@ -43,7 +43,7 @@ type OtherVideoResourcesResponse struct {
 }
 
 type RecentlyVisitedCoursesResponse struct {
-	Courses []*Course `json:"courses,omitempty"`
+	Courses []*Course `json:"visited_courses,omitempty"`
 }
 
 type NotesResponse []*Note

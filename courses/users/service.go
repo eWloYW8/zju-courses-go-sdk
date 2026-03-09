@@ -237,6 +237,12 @@ func (s *Service) GetRecentlyVisitedCourses(ctx context.Context) (*RecentlyVisit
 	return result, err
 }
 
+// UpdateRecentlyVisitedCourses updates the ordered recently visited course ids.
+func (s *Service) UpdateRecentlyVisitedCourses(ctx context.Context, courseIDs UpdateRecentlyVisitedCoursesRequest) error {
+	_, err := s.client.Put(ctx, "/api/user/recently-visited-courses", courseIDs, nil)
+	return err
+}
+
 // --- User Preferences ---
 
 // SetLanguage sets the user's language preference.

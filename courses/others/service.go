@@ -31,8 +31,8 @@ func (s *Service) ListProjects(ctx context.Context) (json.RawMessage, error) {
 // ListProjectsWithParams returns projects with frontend paging/filter parameters.
 func (s *Service) ListProjectsWithParams(ctx context.Context, params ListProjectsParams) (*ProjectsResponse, error) {
 	u := addListOptions("/api/projects", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
-	if params.Conditions != "" {
-		u = addQueryParams(u, map[string]string{"conditions": params.Conditions})
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		u = addQueryParams(u, map[string]string{"conditions": encoded})
 	}
 	result := new(ProjectsResponse)
 	_, err := s.client.Get(ctx, u, result)
@@ -54,6 +54,13 @@ func (s *Service) CreateProject(ctx context.Context, body interface{}) (json.Raw
 	return result, err
 }
 
+// CreateProjectTyped creates a project and decodes the created project payload.
+func (s *Service) CreateProjectTyped(ctx context.Context, body *CreateProjectRequest) (*Project, error) {
+	result := new(Project)
+	_, err := s.client.Post(ctx, "/api/project", body, result)
+	return result, err
+}
+
 // ApplyProject submits a project application.
 func (s *Service) ApplyProject(ctx context.Context, projectID int) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/projects/%d/apply", projectID)
@@ -65,8 +72,8 @@ func (s *Service) ApplyProject(ctx context.Context, projectID int) (json.RawMess
 // ListProjectApplications returns paged applications for a project.
 func (s *Service) ListProjectApplications(ctx context.Context, projectID int, params ListProjectsParams) (*ProjectApplicationsResponse, error) {
 	u := addListOptions(fmt.Sprintf("/api/projects/%d/apply", projectID), &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
-	if params.Conditions != "" {
-		u = addQueryParams(u, map[string]string{"conditions": params.Conditions})
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		u = addQueryParams(u, map[string]string{"conditions": encoded})
 	}
 	result := new(ProjectApplicationsResponse)
 	_, err := s.client.Get(ctx, u, result)
@@ -81,12 +88,60 @@ func (s *Service) UpdateProject(ctx context.Context, projectID int, body interfa
 	return result, err
 }
 
+// UpdateProjectTyped updates a project and decodes the updated project payload.
+func (s *Service) UpdateProjectTyped(ctx context.Context, projectID int, body *UpdateProjectRequest) (*Project, error) {
+	u := fmt.Sprintf("/api/project/%d", projectID)
+	result := new(Project)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
+}
+
 // AuditProjectApplication audits a project application.
 func (s *Service) AuditProjectApplication(ctx context.Context, projectID, applicationID int, status string) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/projects/%d/audit/%d", projectID, applicationID)
 	var result json.RawMessage
 	_, err := s.client.Put(ctx, u, AuditProjectApplicationRequest{Status: status}, &result)
 	return result, err
+}
+
+// ListProjectSharedResources returns project shared resources using the frontend conditions payload.
+func (s *Service) ListProjectSharedResources(ctx context.Context, projectID int, conditions ProjectSharedResourceConditions) ([]*ProjectSharedResource, error) {
+	u := fmt.Sprintf("/api/project/%d/share-resource", projectID)
+	if encoded := encodeConditions(conditions); encoded != "" {
+		u = addQueryParams(u, map[string]string{"conditions": encoded})
+	}
+	var result []*ProjectSharedResource
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// CreateProjectSharedResources creates project shared-resource references.
+func (s *Service) CreateProjectSharedResources(ctx context.Context, projectID int, body *ProjectSharedResourceRequest) error {
+	u := fmt.Sprintf("/api/project/%d/share-resource", projectID)
+	_, err := s.client.Post(ctx, u, body, nil)
+	return err
+}
+
+// UpdateProjectSharedResources updates project shared-resource references.
+func (s *Service) UpdateProjectSharedResources(ctx context.Context, projectID int, body *ProjectSharedResourceRequest) error {
+	u := fmt.Sprintf("/api/project/%d/share-resource", projectID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// DeleteProjectSharedResource deletes a project shared-resource reference.
+func (s *Service) DeleteProjectSharedResource(ctx context.Context, projectID int, params *DeleteProjectSharedResourceRequest) error {
+	u := fmt.Sprintf("/api/project/%d/share-resource", projectID)
+	query := map[string]string{
+		"reference_id": fmt.Sprintf("%d", params.ReferenceID),
+		"upload_id":    fmt.Sprintf("%d", params.UploadID),
+	}
+	if len(params.NodeIDs) > 0 {
+		query["node_ids"] = encodeConditions(params.NodeIDs)
+	}
+	u = addQueryParams(u, query)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
 }
 
 // --- Studio ---
@@ -375,4 +430,19 @@ func addListOptions(urlStr string, opts *model.ListOptions) string {
 
 func addQueryParams(urlStr string, params map[string]string) string {
 	return sdk.AddQueryParams(urlStr, params)
+}
+
+func encodeConditions(conditions any) string {
+	switch value := conditions.(type) {
+	case nil:
+		return ""
+	case string:
+		return value
+	default:
+		encoded, err := json.Marshal(value)
+		if err != nil {
+			return ""
+		}
+		return string(encoded)
+	}
 }

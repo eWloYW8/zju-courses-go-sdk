@@ -90,6 +90,9 @@ type Course struct {
 	ProblemGraphPublishType   string            `json:"problem_graph_publish_type,omitempty"`
 	CreatedAt                 string            `json:"created_at,omitempty"`
 	UpdatedAt                 string            `json:"updated_at,omitempty"`
+	URL                       string            `json:"url,omitempty"`
+	TeachingUnitType          string            `json:"teaching_unit_type,omitempty"`
+	CurrentUserIsMember       bool              `json:"current_user_is_member,omitempty"`
 	TeamTeachings             []*User           `json:"team_teachings,omitempty"`
 	Modules                   []*Module         `json:"modules,omitempty"`
 	Enrollments               []*Enrollment     `json:"enrollments,omitempty"`

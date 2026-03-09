@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/activities"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
@@ -260,6 +261,39 @@ func (s *Service) GetOutline(ctx context.Context, courseID int) (*OutlineRespons
 	return result, err
 }
 
+// CreateOrUpdateOutlineItem creates or updates a course outline item.
+func (s *Service) CreateOrUpdateOutlineItem(ctx context.Context, courseOutlineID int, body *UpsertOutlineItemRequest) (*OutlineItemResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/outline-item", courseOutlineID)
+	result := new(OutlineItemResponse)
+	_, err := s.client.Post(ctx, u, body, result)
+	return result, err
+}
+
+// DeleteOutlineItem deletes a course outline item.
+func (s *Service) DeleteOutlineItem(ctx context.Context, courseOutlineID int, itemID int) error {
+	u := fmt.Sprintf("/api/course/%d/outline-item/%d", courseOutlineID, itemID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// GetOutlineDownloadPrintPermissions returns outline download/print permissions for a given type.
+func (s *Service) GetOutlineDownloadPrintPermissions(ctx context.Context, courseID int, outlineType string) (*OutlineDownloadPrintPermissions, error) {
+	u := fmt.Sprintf("/api/courses/%d/download-print-permissions", courseID)
+	if outlineType != "" {
+		u = addQueryParams(u, map[string]string{"type": outlineType})
+	}
+	result := new(OutlineDownloadPrintPermissions)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateOutlineDownloadPrintPermissions updates outline download/print permissions.
+func (s *Service) UpdateOutlineDownloadPrintPermissions(ctx context.Context, courseID int, body *OutlineDownloadPrintPermissions) error {
+	u := fmt.Sprintf("/api/courses/%d/download-print-permissions", courseID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
 // GetActivityPublishSetting returns the activity publish settings.
 func (s *Service) GetActivityPublishSetting(ctx context.Context, courseID int) (*ActivityPublishSetting, error) {
 	u := fmt.Sprintf("/api/course/%d/activity-publish-setting", courseID)
@@ -320,9 +354,164 @@ func (s *Service) GetEntryRecord(ctx context.Context, courseID int) (json.RawMes
 
 // GetOnlineVideoCompletenessSetting returns the online video completeness setting.
 func (s *Service) GetOnlineVideoCompletenessSetting(ctx context.Context, courseID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/course/%d/online-video-completeness/setting", courseID)
+	u := fmt.Sprintf("/api/course/%d/online-video-completeness/setting?no-loading-animation=true", courseID)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetOnlineVideoCompletenessSettingDetail returns typed online-video completeness settings.
+func (s *Service) GetOnlineVideoCompletenessSettingDetail(ctx context.Context, courseID int) (*OnlineVideoCompletenessSettingResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/online-video-completeness/setting?no-loading-animation=true", courseID)
+	result := new(OnlineVideoCompletenessSettingResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateOnlineVideoCompletenessSetting updates online-video completeness settings.
+func (s *Service) UpdateOnlineVideoCompletenessSetting(ctx context.Context, courseID int, body interface{}) (*OnlineVideoCompletenessSettingResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/online-video-completeness/setting", courseID)
+	result := new(OnlineVideoCompletenessSettingResponse)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
+}
+
+// DeleteOnlineVideoCompletenessSetting deletes online-video completeness settings.
+func (s *Service) DeleteOnlineVideoCompletenessSetting(ctx context.Context, courseID int) error {
+	u := fmt.Sprintf("/api/course/%d/online-video-completeness/setting", courseID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// GetOnlineVideoCompletenessScores returns course-level online-video completeness scores.
+func (s *Service) GetOnlineVideoCompletenessScores(ctx context.Context, courseID int) (*OnlineVideoCompletenessScoresResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/online-video-completeness/scores", courseID)
+	result := new(OnlineVideoCompletenessScoresResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetOnlineVideoCompletenessScore returns the current student's online-video completeness score.
+func (s *Service) GetOnlineVideoCompletenessScore(ctx context.Context, courseID int) (*OnlineVideoCompletenessScoreResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/online-video-completeness/score", courseID)
+	result := new(OnlineVideoCompletenessScoreResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetPerformanceScoreSetting returns course performance score settings.
+func (s *Service) GetPerformanceScoreSetting(ctx context.Context, courseID int) (*PerformanceScoreSettingResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/performance/score-setting", courseID)
+	result := new(PerformanceScoreSettingResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdatePerformanceScoreSetting updates course performance score settings.
+func (s *Service) UpdatePerformanceScoreSetting(ctx context.Context, courseID int, body interface{}) error {
+	u := fmt.Sprintf("/api/course/%d/performance/score-setting", courseID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// ListStudentsPerformance returns course students-performance data using the frontend query shape.
+func (s *Service) ListStudentsPerformance(ctx context.Context, courseID int, params *StudentsPerformanceParams) (*StudentsPerformanceResponse, error) {
+	values := url.Values{}
+	if params == nil || params.IsOriginalScore == nil {
+		values.Set("isOriginalScore", "true")
+	} else {
+		values.Set("isOriginalScore", strconv.FormatBool(*params.IsOriginalScore))
+	}
+	if params != nil {
+		if params.Page > 0 {
+			values.Set("page", strconv.Itoa(params.Page))
+		}
+		if params.PageSize > 0 {
+			values.Set("page_size", strconv.Itoa(params.PageSize))
+		}
+		if params.OnlyStudentsName {
+			values.Set("onlyStudentsName", "true")
+		}
+		if encoded := encodeConditions(params.Conditions); encoded != "" {
+			values.Set("conditions", encoded)
+		}
+	}
+	u := fmt.Sprintf("/api/course/%d/students-performance", courseID)
+	if encoded := values.Encode(); encoded != "" {
+		u += "?" + encoded
+	}
+	result := new(StudentsPerformanceResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateStudentPerformanceScore updates one student's performance score.
+func (s *Service) UpdateStudentPerformanceScore(ctx context.Context, courseID int, body *UpdateStudentPerformanceScoreRequest) error {
+	u := fmt.Sprintf("/api/course/%d/performance/score", courseID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// GetScorePercentages returns the remaining/allocated score percentages for a course.
+func (s *Service) GetScorePercentages(ctx context.Context, courseID int) (*ScorePercentagesResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/score-percentages", courseID)
+	result := new(ScorePercentagesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateCourseAdvanceSetting updates course advance settings used by the score-percentage UI.
+func (s *Service) UpdateCourseAdvanceSetting(ctx context.Context, courseID int, body *CourseAdvanceSettingRequest) error {
+	u := fmt.Sprintf("/api/course/%d/course-advance-setting", courseID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// UpdateScorePercentages updates activity/custom/rollcall/performance score percentages.
+func (s *Service) UpdateScorePercentages(ctx context.Context, courseID int, body *UpdateScorePercentagesRequest) error {
+	u := fmt.Sprintf("/api/courses/%d/score-percentages", courseID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// GetStudentSelfScore returns the current student's overall score breakdown.
+func (s *Service) GetStudentSelfScore(ctx context.Context, courseID int) (*StudentSelfScoreResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/student-self-score", courseID)
+	result := new(StudentSelfScoreResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetRollcallScore returns rollcall scoring data for a course.
+func (s *Service) GetRollcallScore(ctx context.Context, courseID int) (*RollcallScoreResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/rollcall-score", courseID)
+	result := new(RollcallScoreResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetPerformanceScore returns performance-score data for a course.
+func (s *Service) GetPerformanceScore(ctx context.Context, courseID int, isOriginalScore bool) (*PerformanceScoreResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/performance-score", courseID)
+	u = addQueryParams(u, map[string]string{"isOriginalScore": strconv.FormatBool(isOriginalScore)})
+	result := new(PerformanceScoreResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetScoreDistribution returns the frontend score-distribution payload.
+func (s *Service) GetScoreDistribution(ctx context.Context, courseID int) (*ScoreDistributionResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/score-distribution?no-intercept=true", courseID)
+	result := new(ScoreDistributionResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetScoreTypeSettings returns score-type settings for a course.
+func (s *Service) GetScoreTypeSettings(ctx context.Context, courseID int) (*ScoreTypeSettingsResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/score-type-settings", courseID)
+	result := new(ScoreTypeSettingsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -694,6 +883,17 @@ func (s *Service) InspectChild(ctx context.Context, courseID int) (json.RawMessa
 func (s *Service) ListCourseClassifications(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, "/api/course-classifications", &result)
+	return result, err
+}
+
+// ListCourseClassificationsWithPrefix returns course classifications from either /api or /anonymous-api.
+func (s *Service) ListCourseClassificationsWithPrefix(ctx context.Context, anonymous bool) (*CourseClassificationsResponse, error) {
+	prefix := "/api"
+	if anonymous {
+		prefix = "/anonymous-api"
+	}
+	result := new(CourseClassificationsResponse)
+	_, err := s.client.Get(ctx, prefix+"/course-classifications", result)
 	return result, err
 }
 

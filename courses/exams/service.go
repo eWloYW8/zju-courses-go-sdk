@@ -284,7 +284,7 @@ func (s *Service) UpdateCoursewareQuizSubjects(ctx context.Context, quizID int, 
 }
 
 // GenerateCoursewareQuizSubjects generates subjects for a courseware activity.
-func (s *Service) GenerateCoursewareQuizSubjects(ctx context.Context, activityID int, body interface{}) (json.RawMessage, error) {
+func (s *Service) GenerateCoursewareQuizSubjects(ctx context.Context, activityID int, body *GenerateCoursewareQuizSubjectsRequest) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/courseware-quiz/activity/%d/subjects", activityID)
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, u, body, &result)
@@ -298,15 +298,15 @@ func (s *Service) FormatQuestion(ctx context.Context, body interface{}) (json.Ra
 	return result, err
 }
 
-// GenerateSubjects generates subjects using AI.
-func (s *Service) GenerateSubjects(ctx context.Context, body interface{}) (json.RawMessage, error) {
+// GenerateSubjects generates subjects from an uploaded file using AI.
+func (s *Service) GenerateSubjects(ctx context.Context, body *GenerateSubjectsRequest) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, "/api/courseware-quiz/generate-subjects", body, &result)
 	return result, err
 }
 
 // GenerateSubjectsByText generates subjects from text.
-func (s *Service) GenerateSubjectsByText(ctx context.Context, body interface{}) (json.RawMessage, error) {
+func (s *Service) GenerateSubjectsByText(ctx context.Context, body *GenerateSubjectsByTextRequest) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, "/api/courseware-quiz/generate-subjects-by-text", body, &result)
 	return result, err
@@ -584,16 +584,20 @@ func (s *Service) GetRubricTemplate(ctx context.Context) (*model.RubricInstance,
 
 // CreateRubric creates a new rubric.
 func (s *Service) CreateRubric(ctx context.Context, body interface{}) (*model.Rubric, error) {
+	u := addQueryParams("/api/rubrics", map[string]string{"fields": "id,name,conditions"})
 	result := new(model.Rubric)
-	_, err := s.client.Post(ctx, "/api/rubrics", body, result)
+	_, err := s.client.Post(ctx, u, body, result)
 	return result, err
 }
 
 // UpdateRubric updates a rubric.
-func (s *Service) UpdateRubric(ctx context.Context, rubricID int, body interface{}) error {
-	u := fmt.Sprintf("/api/rubrics/%d", rubricID)
-	_, err := s.client.Put(ctx, u, body, nil)
-	return err
+func (s *Service) UpdateRubric(ctx context.Context, rubricID int, body interface{}) (*model.Rubric, error) {
+	u := addQueryParams(fmt.Sprintf("/api/rubrics/%d", rubricID), map[string]string{
+		"fields": "id,name,conditions,engage_number,created_by",
+	})
+	result := new(model.Rubric)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
 }
 
 // DeleteRubric deletes a rubric.
@@ -606,9 +610,12 @@ func (s *Service) DeleteRubric(ctx context.Context, rubricID int) error {
 // UpdateSubjectGroup updates a subject group.
 func (s *Service) UpdateSubjectGroup(ctx context.Context, subjectGroupID int, body interface{}) (*SubjectGroup, error) {
 	u := fmt.Sprintf("/api/subject-group/%d", subjectGroupID)
-	result := new(SubjectGroup)
+	result := new(SubjectGroupResponse)
 	_, err := s.client.Put(ctx, u, body, result)
-	return result, err
+	if err != nil {
+		return nil, err
+	}
+	return result.Data, nil
 }
 
 // DeleteSubjectGroup deletes a subject group.
@@ -616,6 +623,28 @@ func (s *Service) DeleteSubjectGroup(ctx context.Context, subjectGroupID int) er
 	u := fmt.Sprintf("/api/subject-group/%d", subjectGroupID)
 	_, err := s.client.Delete(ctx, u, nil)
 	return err
+}
+
+// ListSubjectGroups returns subject groups for an exam/video-quiz/classroom target.
+func (s *Service) ListSubjectGroups(ctx context.Context, targetType string, targetID int) ([]*SubjectGroup, error) {
+	u := fmt.Sprintf("/api/%s/%d/subject-groups", targetType, targetID)
+	result := new(SubjectGroupsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	if err != nil {
+		return nil, err
+	}
+	return result.Data, nil
+}
+
+// CreateSubjectGroup creates a subject group for an exam/video-quiz/classroom target.
+func (s *Service) CreateSubjectGroup(ctx context.Context, targetType string, targetID int, body *SubjectGroupRequest) (*SubjectGroup, error) {
+	u := fmt.Sprintf("/api/%s/%d/subject-group", targetType, targetID)
+	result := new(SubjectGroupResponse)
+	_, err := s.client.Post(ctx, u, body, result)
+	if err != nil {
+		return nil, err
+	}
+	return result.Data, nil
 }
 
 // SortSubjectGroupSubjects sorts subjects within a subject group.

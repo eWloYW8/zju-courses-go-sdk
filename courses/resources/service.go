@@ -20,6 +20,13 @@ type Service struct {
 	client *sdk.Client
 }
 
+func apiPrefix(anonymous bool) string {
+	if anonymous {
+		return "/anonymous-api"
+	}
+	return "/api"
+}
+
 // --- Resource Groups ---
 
 // ListResourceGroups returns resource groups.
@@ -291,6 +298,13 @@ func (s *Service) GetSharedResourceClassifications(ctx context.Context) (json.Ra
 	return result, err
 }
 
+// ListSharedResourceClassificationsWithPrefix returns shared-resource classifications from either /api or /anonymous-api.
+func (s *Service) ListSharedResourceClassificationsWithPrefix(ctx context.Context, anonymous bool) (*ResourceClassificationsResponse, error) {
+	result := new(ResourceClassificationsResponse)
+	_, err := s.client.Get(ctx, apiPrefix(anonymous)+"/shared-resource/classifications", result)
+	return result, err
+}
+
 // ListSharedResourceManagement returns shared resource management list.
 func (s *Service) ListSharedResourceManagement(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
@@ -341,6 +355,17 @@ func (s *Service) ListMostLikedSharedResources(ctx context.Context, conditions s
 	return result, err
 }
 
+// ListMostLikedSharedResourcesWithPrefix returns most-liked shared resources from either /api or /anonymous-api.
+func (s *Service) ListMostLikedSharedResourcesWithPrefix(ctx context.Context, anonymous bool, conditions string) (*SharedResourcesResponse, error) {
+	u := apiPrefix(anonymous) + "/shared-resources/most-liked"
+	if conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": conditions})
+	}
+	result := new(SharedResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // ListRecentUsedSharedResources returns recently used shared resources.
 func (s *Service) ListRecentUsedSharedResources(ctx context.Context, classificationID string, departmentIDs string) (*SharedResourcesResponse, error) {
 	params := map[string]string{}
@@ -351,6 +376,52 @@ func (s *Service) ListRecentUsedSharedResources(ctx context.Context, classificat
 		params["departmentIds"] = departmentIDs
 	}
 	u := addQueryParams("/api/shared-resources/recent-used", params)
+	result := new(SharedResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListRecentUsedSharedResourcesWithPrefix returns recently used shared resources from either /api or /anonymous-api.
+func (s *Service) ListRecentUsedSharedResourcesWithPrefix(ctx context.Context, anonymous bool, params ListRecentUsedSharedResourcesParams) (*SharedResourcesResponse, error) {
+	query := map[string]string{}
+	if params.ClassificationID != "" {
+		query["classificationId"] = params.ClassificationID
+	}
+	if params.DepartmentIDs != "" {
+		query["departmentIds"] = params.DepartmentIDs
+	}
+	u := addQueryParams(apiPrefix(anonymous)+"/shared-resources/recent-used", query)
+	result := new(SharedResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListHomepageSharedResources returns the homepage shared-resources block using the frontend no-intercept query.
+func (s *Service) ListHomepageSharedResources(ctx context.Context, anonymous bool, params ListHomepageSharedResourcesParams) (*SharedResourcesResponse, error) {
+	conditions := map[string]any{
+		"parent_id": 0,
+		"order_by":  "view_count",
+	}
+	if params.DepartmentID > 0 {
+		conditions["department"] = params.DepartmentID
+	}
+	if params.ClassificationID > 0 {
+		conditions["classification"] = params.ClassificationID
+	}
+	u := addQueryParams(apiPrefix(anonymous)+"/shared-resources?no-intercept=true", map[string]string{
+		"conditions": encodeConditions(conditions),
+	})
+	result := new(SharedResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// SearchSharedResourcesWithPrefix searches shared resources through the /api or /anonymous-api listing endpoint.
+func (s *Service) SearchSharedResourcesWithPrefix(ctx context.Context, anonymous bool, params ListSharedResourcesParams) (*SharedResourcesResponse, error) {
+	u := addListOptions(apiPrefix(anonymous)+"/shared-resources", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if params.Conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": params.Conditions})
+	}
 	result := new(SharedResourcesResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
@@ -425,6 +496,40 @@ func (s *Service) SaveResources(ctx context.Context, body interface{}) error {
 func (s *Service) CheckSaveResources(ctx context.Context, body interface{}) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, "/api/save-resources/check", body, &result)
+	return result, err
+}
+
+// ListSubjectLibFolders returns subject-lib folders for the save-resource picker.
+func (s *Service) ListSubjectLibFolders(ctx context.Context, parentID int) (*SubjectLibFoldersResponse, error) {
+	u := addQueryParams("/api/subject-libs/folders", map[string]string{"parent_id": fmt.Sprintf("%d", parentID)})
+	result := new(SubjectLibFoldersResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetSubjectLibWithPrefix returns a subject library from either /api or /anonymous-api.
+func (s *Service) GetSubjectLibWithPrefix(ctx context.Context, anonymous bool, subjectLibID int) (*model.SubjectLib, error) {
+	u := fmt.Sprintf("%s/subject-libs/%d", apiPrefix(anonymous), subjectLibID)
+	result := new(model.SubjectLib)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListDepartmentsWithPrefix returns departments from either /api or /anonymous-api with an optional field list.
+func (s *Service) ListDepartmentsWithPrefix(ctx context.Context, anonymous bool, fields string) (*DepartmentsResponse, error) {
+	u := apiPrefix(anonymous) + "/departments"
+	if fields != "" {
+		u = addQueryParams(u, map[string]string{"fields": fields})
+	}
+	result := new(DepartmentsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListHomepageDepartmentsWithPrefix returns the departments shown on the homepage.
+func (s *Service) ListHomepageDepartmentsWithPrefix(ctx context.Context, anonymous bool) (*DepartmentsResponse, error) {
+	result := new(DepartmentsResponse)
+	_, err := s.client.Get(ctx, apiPrefix(anonymous)+"/departments/show-on-homepage", result)
 	return result, err
 }
 
@@ -739,4 +844,15 @@ func addListOptions(urlStr string, opts *model.ListOptions) string {
 
 func addQueryParams(urlStr string, params map[string]string) string {
 	return sdk.AddQueryParams(urlStr, params)
+}
+
+func encodeConditions(v any) string {
+	if v == nil {
+		return ""
+	}
+	data, err := json.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }

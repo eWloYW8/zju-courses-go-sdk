@@ -41,8 +41,25 @@ func (s *Service) GetConfig(ctx context.Context) (*Config, error) {
 
 // GetLangSettings returns language settings for an organization.
 func (s *Service) GetLangSettings(ctx context.Context, orgID int) (*LangSettingsResponse, error) {
-	u := fmt.Sprintf("/api/orgs/%d/lang-settings", orgID)
+	return s.GetLangSettingsWithPrefix(ctx, orgID, false)
+}
+
+// GetLangSettingsWithPrefix returns language settings for visitor or member flows.
+func (s *Service) GetLangSettingsWithPrefix(ctx context.Context, orgID int, anonymous bool) (*LangSettingsResponse, error) {
+	prefix := "/api"
+	if anonymous {
+		prefix = "/anonymous-api"
+	}
+	u := fmt.Sprintf("%s/orgs/%d/lang-settings", prefix, orgID)
 	result := new(LangSettingsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetLoginSettings returns anonymous login settings for an organization.
+func (s *Service) GetLoginSettings(ctx context.Context, orgID int) (*LoginSettingsResponse, error) {
+	u := fmt.Sprintf("/anonymous-api/orgs/%d/login-settings", orgID)
+	result := new(LoginSettingsResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
@@ -192,10 +209,16 @@ func (s *Service) ListDepartmentsForUser(ctx context.Context) (*DepartmentsRespo
 }
 
 // GetSourceDepartmentCodeForUser returns the source department code.
-func (s *Service) GetSourceDepartmentCodeForUser(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/source-department-code-for-user", &result)
+func (s *Service) GetSourceDepartmentCodeForUser(ctx context.Context) (*SourceDepartmentCodeResponse, error) {
+	result := new(SourceDepartmentCodeResponse)
+	_, err := s.client.Get(ctx, "/api/source-department-code-for-user", result)
 	return result, err
+}
+
+// UpdateUserDepartment updates the current user's selected department.
+func (s *Service) UpdateUserDepartment(ctx context.Context, body *UpdateUserDepartmentRequest) error {
+	_, err := s.client.Put(ctx, "/api/user/department", body, nil)
+	return err
 }
 
 // ListTopDepartments returns top-level departments.
@@ -247,15 +270,44 @@ func (s *Service) GetOutlineSetting(ctx context.Context) (*OutlineSettingRespons
 	return result, err
 }
 
+// AddOutlineSetting adds an outline option to the specified setting group.
+func (s *Service) AddOutlineSetting(ctx context.Context, settingID int, body interface{}) error {
+	u := fmt.Sprintf("/api/outline-setting/%d", settingID)
+	_, err := s.client.Post(ctx, u, body, nil)
+	return err
+}
+
 // UpdateOutlineSetting updates outline settings.
-func (s *Service) UpdateOutlineSetting(ctx context.Context, body interface{}) error {
-	_, err := s.client.Put(ctx, "/api/outline-setting", body, nil)
+func (s *Service) UpdateOutlineSetting(ctx context.Context, settingID int, body interface{}) error {
+	u := fmt.Sprintf("/api/outline-setting/%d", settingID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// SortOutlineSetting sorts outline setting options.
+func (s *Service) SortOutlineSetting(ctx context.Context, settingID int, body interface{}) error {
+	u := fmt.Sprintf("/api/outline-setting/%d/sort", settingID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// DeleteOutlineSettingOption deletes one outline option by key.
+func (s *Service) DeleteOutlineSettingOption(ctx context.Context, settingID int, key string) error {
+	u := fmt.Sprintf("/api/outline-setting/%d/option/%s", settingID, url.PathEscape(key))
+	_, err := s.client.Delete(ctx, u, nil)
 	return err
 }
 
 // ToggleOutlineSetting toggles outline setting.
 func (s *Service) ToggleOutlineSetting(ctx context.Context, body interface{}) error {
-	_, err := s.client.Post(ctx, "/api/outline-setting/toggle", body, nil)
+	_, err := s.client.Put(ctx, "/api/outline-setting/toggle", body, nil)
+	return err
+}
+
+// SaveOutlineRequiredOptions updates required outline options for a setting group.
+func (s *Service) SaveOutlineRequiredOptions(ctx context.Context, settingID int, body *SaveOutlineRequiredOptionsRequest) error {
+	u := fmt.Sprintf("/api/outline-setting/%d/required-options", settingID)
+	_, err := s.client.Put(ctx, u, body, nil)
 	return err
 }
 
@@ -648,6 +700,14 @@ func (s *Service) AuthValidate(ctx context.Context, body interface{}) (json.RawM
 
 // --- Plans ---
 
+// GetOrgPlanInfo returns organization plan usage details.
+func (s *Service) GetOrgPlanInfo(ctx context.Context, orgID int) (*OrgPlanInfoResponse, error) {
+	u := fmt.Sprintf("/api/org/%d/org-plan-info", orgID)
+	result := new(OrgPlanInfoResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // GetCurrentPlan returns the current plan.
 func (s *Service) GetCurrentPlan(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
@@ -690,6 +750,12 @@ func (s *Service) UpdateWGAdminOrgRequest(ctx context.Context, body interface{})
 	var result json.RawMessage
 	_, err := s.client.Put(ctx, "/api/wg-admin/orgs/request", body, &result)
 	return result, err
+}
+
+// WGAdminOperateRequest runs the follow-up PUT against the arbitrary operation URL returned by the frontend flow.
+func (s *Service) WGAdminOperateRequest(ctx context.Context, requestURL string) error {
+	_, err := s.client.Put(ctx, requestURL, nil, nil)
+	return err
 }
 
 // --- Face Recognition ---

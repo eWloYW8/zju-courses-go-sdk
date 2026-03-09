@@ -21,3 +21,22 @@ type ResourceFolder struct {
 }
 
 type SharedResource = model.SharedResource
+
+type ResourceClassification struct {
+	ID       int     `json:"id"`
+	Name     string  `json:"name,omitempty"`
+	ParentID int     `json:"parent_id,omitempty"`
+	Cover    *string `json:"cover,omitempty"`
+}
+
+type SubjectLibFolder struct {
+	ID           int                 `json:"id"`
+	Name         string              `json:"name,omitempty"`
+	Title        string              `json:"title,omitempty"`
+	ParentID     int                 `json:"parent_id,omitempty"`
+	HasSubFolder bool                `json:"has_sub_folder,omitempty"`
+	Level        int                 `json:"level,omitempty"`
+	Selected     bool                `json:"selected,omitempty"`
+	Expanded     bool                `json:"expanded,omitempty"`
+	Children     []*SubjectLibFolder `json:"children,omitempty"`
+}

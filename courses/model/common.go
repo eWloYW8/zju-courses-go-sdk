@@ -182,8 +182,12 @@ type Role struct {
 
 // CreditState represents AI credit state information.
 type CreditState struct {
-	CreditRemaining int    `json:"credit_remaining"`
-	Status          string `json:"status"`
+	CreditAssigned  int    `json:"credit_assigned,omitempty"`
+	CreditUsed      int    `json:"credit_used,omitempty"`
+	CreditRemaining int    `json:"credit_remaining,omitempty"`
+	CreditLimit     *int   `json:"credit_limit,omitempty"`
+	Status          string `json:"status,omitempty"`
+	HasCreditLimit  any    `json:"has_credit_limit,omitempty"`
 }
 
 // AcademicYear represents an academic year.

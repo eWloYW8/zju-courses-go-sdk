@@ -229,6 +229,12 @@ type KnowledgeGraphSimilarity struct {
 	Checked          bool    `json:"checked,omitempty"`
 }
 
+type KnowledgeExtensionApp map[string]any
+
+type KnowledgeGraphCluster map[string]any
+
+type KnowledgeGraphSyncStatus map[string]any
+
 type KnowledgeNodeWeekStat struct {
 	ID               int     `json:"id"`
 	CompletenessRate float64 `json:"avg_completeness_rate,omitempty"`

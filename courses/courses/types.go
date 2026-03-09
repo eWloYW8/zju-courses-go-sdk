@@ -93,6 +93,9 @@ type Course struct {
 	ProblemGraphPublishType   string                     `json:"problem_graph_publish_type,omitempty"`
 	CreatedAt                 string                     `json:"created_at,omitempty"`
 	UpdatedAt                 string                     `json:"updated_at,omitempty"`
+	URL                       string                     `json:"url,omitempty"`
+	TeachingUnitType          string                     `json:"teaching_unit_type,omitempty"`
+	CurrentUserIsMember       bool                       `json:"current_user_is_member,omitempty"`
 	TeamTeachings             []*activities.ActivityUser `json:"team_teachings,omitempty"`
 	Modules                   []*Module                  `json:"modules,omitempty"`
 	Enrollments               []*Enrollment              `json:"enrollments,omitempty"`
@@ -205,18 +208,19 @@ type CompletenessResponse struct {
 }
 
 type Outline struct {
-	ID             int             `json:"id"`
-	CourseID       int             `json:"course_id,omitempty"`
-	CommentChinese *OutlineField   `json:"comment_chinese,omitempty"`
-	CommonFields   []*OutlineField `json:"common_fields,omitempty"`
-	CustomFields   []*OutlineField `json:"custom_fields,omitempty"`
-	EndDate        *string         `json:"end_date,omitempty"`
-	ExternalURL    *string         `json:"external_url,omitempty"`
-	IsClosed       bool            `json:"is_closed,omitempty"`
-	IsImported     bool            `json:"is_imported,omitempty"`
-	Status         string          `json:"status,omitempty"`
-	CreatedAt      string          `json:"created_at,omitempty"`
-	UpdatedAt      string          `json:"updated_at,omitempty"`
+	ID                              int             `json:"id"`
+	CourseID                        int             `json:"course_id,omitempty"`
+	CommentChinese                  *OutlineField   `json:"comment_chinese,omitempty"`
+	CommonFields                    []*OutlineField `json:"common_fields,omitempty"`
+	CustomFields                    []*OutlineField `json:"custom_fields,omitempty"`
+	TeachingScheduleAndOthersFields []*OutlineField `json:"teaching_schedule_and_others_fields,omitempty"`
+	EndDate                         *string         `json:"end_date,omitempty"`
+	ExternalURL                     *string         `json:"external_url,omitempty"`
+	IsClosed                        bool            `json:"is_closed,omitempty"`
+	IsImported                      bool            `json:"is_imported,omitempty"`
+	Status                          string          `json:"status,omitempty"`
+	CreatedAt                       string          `json:"created_at,omitempty"`
+	UpdatedAt                       string          `json:"updated_at,omitempty"`
 }
 
 type OutlineField struct {
@@ -225,6 +229,12 @@ type OutlineField struct {
 	Title       string          `json:"title,omitempty"`
 	Description string          `json:"description,omitempty"`
 	Uploads     []*model.Upload `json:"uploads,omitempty"`
+	Attachments []*model.Upload `json:"attachments,omitempty"`
+}
+
+type OutlineDownloadPrintPermissions struct {
+	AllowDownload bool `json:"allow_download,omitempty"`
+	AllowPrint    bool `json:"allow_print,omitempty"`
 }
 
 type HomeworkActivity struct {
@@ -292,6 +302,13 @@ type BlueprintSubmittedInfo struct {
 type ScoreItemGroup struct {
 	ID   int    `json:"id"`
 	Name string `json:"name,omitempty"`
+}
+
+type CourseClassification struct {
+	ID       int     `json:"id"`
+	Name     string  `json:"name,omitempty"`
+	ParentID int     `json:"parent_id,omitempty"`
+	Cover    *string `json:"cover,omitempty"`
 }
 
 // CustomScoreItem represents a custom score item for course grading.

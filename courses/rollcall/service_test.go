@@ -37,3 +37,23 @@ func TestCreateRollcall(t *testing.T) {
 		t.Fatalf("unexpected result: %#v", result)
 	}
 }
+
+func TestListCourseRollcallsUsesFrontendEndpoint(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/course/23/rollcalls" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"rollcalls":[{"id":8,"title":"第1次点名","course_id":23}]}`))
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	result, err := service.ListCourseRollcalls(context.Background(), 23)
+	if err != nil {
+		t.Fatalf("ListCourseRollcalls returned error: %v", err)
+	}
+	if len(result.Rollcalls) != 1 || result.Rollcalls[0].CourseID != 23 {
+		t.Fatalf("unexpected rollcalls: %#v", result)
+	}
+}

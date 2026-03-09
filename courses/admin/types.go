@@ -36,6 +36,11 @@ type LangSettingsResponse struct {
 	LangSettings []string `json:"lang_settings"`
 }
 
+// LoginSettingsResponse represents login settings response.
+type LoginSettingsResponse struct {
+	LoginSettings map[string]any `json:"login_settings,omitempty"`
+}
+
 // OutlineSettingResponse represents the outline setting API response.
 type OutlineSettingResponse struct {
 	ID                      int              `json:"id"`
@@ -140,4 +145,38 @@ type LastTaskImported struct {
 // LastTaskCourse represents the imported course metadata nested in task output.
 type LastTaskCourse struct {
 	ID int `json:"id,omitempty"`
+}
+
+// OrgPlanInfoResponse represents the org plan payload returned by /api/org/{id}/org-plan-info.
+type OrgPlanInfoResponse struct {
+	Org     *OrgPlanUsage `json:"org,omitempty"`
+	OrgPlan *OrgPlan      `json:"org_plan,omitempty"`
+}
+
+// OrgPlanUsage represents the organization usage counters used by the plan dashboard.
+type OrgPlanUsage struct {
+	StorageTotal     int64 `json:"storage_total,omitempty"`
+	StorageUsed      int64 `json:"storage_used,omitempty"`
+	StoragePlus      int64 `json:"storage_plus,omitempty"`
+	TransferTotal    int64 `json:"transfer_total,omitempty"`
+	TransferUsed     int64 `json:"transfer_used,omitempty"`
+	TransferPlanUsed int64 `json:"transfer_plan_used,omitempty"`
+	TransferPlus     int64 `json:"transfer_plus,omitempty"`
+	TransferPlusUsed int64 `json:"transfer_plus_used,omitempty"`
+}
+
+// OrgPlan represents the active plan snapshot returned by /api/org/{id}/org-plan-info.
+type OrgPlan struct {
+	ID        int             `json:"id,omitempty"`
+	StartDate string          `json:"start_date,omitempty"`
+	EndDate   string          `json:"end_date,omitempty"`
+	Expired   bool            `json:"expired,omitempty"`
+	Trial     bool            `json:"trial,omitempty"`
+	Plan      *OrgPlanPackage `json:"plan,omitempty"`
+}
+
+// OrgPlanPackage represents the nested plan package on an org plan.
+type OrgPlanPackage struct {
+	StorageTotal     int64 `json:"storage_total,omitempty"`
+	TransferPerMonth int64 `json:"transfer_per_month,omitempty"`
 }

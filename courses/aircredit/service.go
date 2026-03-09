@@ -46,6 +46,17 @@ func (s *Service) ListUserCreditStates(ctx context.Context, params ListCreditSta
 	return result, err
 }
 
+// ListUserCreditStatesTyped returns paged user credit states with typed items.
+func (s *Service) ListUserCreditStatesTyped(ctx context.Context, params ListCreditStatesParams) (*UserCreditStatesResponse, error) {
+	u := addListOptions("/api/air-credit/user/credit-states", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		u = addQueryParams(u, map[string]string{"conditions": encoded})
+	}
+	result := new(UserCreditStatesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // GetUserToken returns the user's AI token.
 func (s *Service) GetUserToken(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
@@ -92,6 +103,17 @@ func (s *Service) ListCourseCreditStates(ctx context.Context, params ListCreditS
 	}
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListCourseCreditStatesTyped returns paged course credit states with typed items.
+func (s *Service) ListCourseCreditStatesTyped(ctx context.Context, params ListCreditStatesParams) (*CourseCreditStatesResponse, error) {
+	u := addListOptions("/api/air-credit/course/credit-states", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		u = addQueryParams(u, map[string]string{"conditions": encoded})
+	}
+	result := new(CourseCreditStatesResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -204,15 +226,32 @@ func (s *Service) GetUserCreditStatesStats(ctx context.Context, params CreditSta
 	return s.getCreditStatesStats(ctx, "user", params)
 }
 
+// GetUserCreditStatesStatsTyped returns paged user credit usage statistics.
+func (s *Service) GetUserCreditStatesStatsTyped(ctx context.Context, params CreditStateStatsParams) (*UserCreditUsageStatsResponse, error) {
+	return s.getCreditStatesStatsTyped(ctx, "user", params)
+}
+
 // GetCourseCreditStatesStats returns paged course credit statistics.
 func (s *Service) GetCourseCreditStatesStats(ctx context.Context, params CreditStateStatsParams) (json.RawMessage, error) {
 	return s.getCreditStatesStats(ctx, "course", params)
+}
+
+// GetCourseCreditStatesStatsTyped returns paged course credit usage statistics.
+func (s *Service) GetCourseCreditStatesStatsTyped(ctx context.Context, params CreditStateStatsParams) (*CourseCreditUsageStatsResponse, error) {
+	return s.getCourseCreditStatesStatsTyped(ctx, "course", params)
 }
 
 // GetOrgCreditStateInfo returns org credit state info.
 func (s *Service) GetOrgCreditStateInfo(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, "/api/air-credit/org/credit-state-info", &result)
+	return result, err
+}
+
+// GetOrgCreditStateInfoTyped returns typed org-level credit allocation info.
+func (s *Service) GetOrgCreditStateInfoTyped(ctx context.Context) (*OrgCreditStateInfo, error) {
+	result := new(OrgCreditStateInfo)
+	_, err := s.client.Get(ctx, "/api/air-credit/org/credit-state-info", result)
 	return result, err
 }
 
@@ -232,6 +271,17 @@ func (s *Service) ListAuditsWithParams(ctx context.Context, params ListAuditsPar
 	}
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListAuditsTyped returns AI credit audit records with typed items.
+func (s *Service) ListAuditsTyped(ctx context.Context, params ListAuditsParams) (*CreditAuditsResponse, error) {
+	u := addListOptions("/api/air-credit/audits", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		u = addQueryParams(u, map[string]string{"conditions": encoded})
+	}
+	result := new(CreditAuditsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -411,6 +461,42 @@ func (s *Service) getCreditStatesStats(ctx context.Context, statType string, par
 	u = addQueryParams(u, query)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+func (s *Service) getCreditStatesStatsTyped(ctx context.Context, statType string, params CreditStateStatsParams) (*UserCreditUsageStatsResponse, error) {
+	u := addListOptions("/api/air-credit/credit-states-stats", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	query := map[string]string{"type": statType}
+	if params.StartDate != "" {
+		query["start_date"] = params.StartDate
+	}
+	if params.EndDate != "" {
+		query["end_date"] = params.EndDate
+	}
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		query["conditions"] = encoded
+	}
+	u = addQueryParams(u, query)
+	result := new(UserCreditUsageStatsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+func (s *Service) getCourseCreditStatesStatsTyped(ctx context.Context, statType string, params CreditStateStatsParams) (*CourseCreditUsageStatsResponse, error) {
+	u := addListOptions("/api/air-credit/credit-states-stats", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	query := map[string]string{"type": statType}
+	if params.StartDate != "" {
+		query["start_date"] = params.StartDate
+	}
+	if params.EndDate != "" {
+		query["end_date"] = params.EndDate
+	}
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		query["conditions"] = encoded
+	}
+	u = addQueryParams(u, query)
+	result := new(CourseCreditUsageStatsResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 

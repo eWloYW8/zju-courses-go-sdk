@@ -27,3 +27,28 @@ type AIPPTUsageStatsResponse struct {
 	Items []*AIPPTUsageStatItem `json:"items"`
 	model.Pagination
 }
+
+type UserCreditStatesResponse struct {
+	Items []*UserCreditState `json:"items"`
+	model.Pagination
+}
+
+type CourseCreditStatesResponse struct {
+	Items []*CourseCreditState `json:"items"`
+	model.Pagination
+}
+
+type UserCreditUsageStatsResponse struct {
+	Items []*UserCreditUsageStat `json:"items"`
+	model.Pagination
+}
+
+type CourseCreditUsageStatsResponse struct {
+	Items []*CourseCreditUsageStat `json:"items"`
+	model.Pagination
+}
+
+type CreditAuditsResponse struct {
+	Items []*CreditAudit `json:"items"`
+	model.Pagination
+}

@@ -256,3 +256,27 @@ type IsLockedStatus struct {
 	IsLocked      bool            `json:"is_locked"`
 	Prerequisites []*Prerequisite `json:"prerequisites,omitempty"`
 }
+
+type GradeScoreItem struct {
+	ID          int      `json:"id"`
+	DisplayName string   `json:"display_name,omitempty"`
+	Type        string   `json:"type,omitempty"`
+	Percentage  *float64 `json:"percentage,omitempty"`
+}
+
+type ScoreRecord struct {
+	ID            int      `json:"id"`
+	CreatedAt     *string  `json:"created_at,omitempty"`
+	ScoreMethod   *string  `json:"score_method,omitempty"`
+	Version       *int     `json:"version,omitempty"`
+	OldScore      *float64 `json:"old_score,omitempty"`
+	Score         *float64 `json:"score,omitempty"`
+	OldFinalScore *float64 `json:"old_final_score,omitempty"`
+	FinalScore    *float64 `json:"final_score,omitempty"`
+	OperatorName  *string  `json:"operator_name,omitempty"`
+	OperatorID    *int     `json:"operator_id,omitempty"`
+}
+
+type ClassinURLResponse struct {
+	URL string `json:"url,omitempty"`
+}

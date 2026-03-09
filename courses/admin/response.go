@@ -14,6 +14,10 @@ type DepartmentsResponse struct {
 	Departments []*model.Department `json:"departments"`
 }
 
+type SourceDepartmentCodeResponse struct {
+	DepartmentCode string `json:"department_code,omitempty"`
+}
+
 type ClassesResponse struct {
 	Classes []*model.Class `json:"classes"`
 }

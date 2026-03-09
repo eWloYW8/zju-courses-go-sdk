@@ -22,6 +22,8 @@ type UserLinkRequest struct {
 	URL  string `json:"url,omitempty"`
 }
 
+type UpdateRecentlyVisitedCoursesRequest []int
+
 type CheckCoursesGraduateRequest struct {
 	CourseIDs []int `json:"course_ids,omitempty"`
 	UserID    *int  `json:"user_id,omitempty"`

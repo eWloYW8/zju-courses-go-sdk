@@ -4,11 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles knowledge-related API operations.
@@ -25,7 +31,15 @@ type Service struct {
 
 // GetCourseKnowledgeGraph returns the knowledge graph for a course.
 func (s *Service) GetCourseKnowledgeGraph(ctx context.Context, courseID int) (*KnowledgeNodesResponse, error) {
-	u := fmt.Sprintf("/api/course/%d/knowledge-nodes", courseID)
+	u := fmt.Sprintf("%s/course/%d/knowledge-nodes", knowledgePrefix(false), courseID)
+	result := new(KnowledgeNodesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetCourseKnowledgeGraphWithPrefix returns the knowledge graph for a course from either /api or /anonymous-api.
+func (s *Service) GetCourseKnowledgeGraphWithPrefix(ctx context.Context, courseID int, anonymous bool) (*KnowledgeNodesResponse, error) {
+	u := fmt.Sprintf("%s/course/%d/knowledge-nodes", knowledgePrefix(anonymous), courseID)
 	result := new(KnowledgeNodesResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
@@ -33,9 +47,16 @@ func (s *Service) GetCourseKnowledgeGraph(ctx context.Context, courseID int) (*K
 
 // GetKnowledgeNodeTrees returns knowledge-node trees for a course.
 func (s *Service) GetKnowledgeNodeTrees(ctx context.Context, courseID int) ([]*KnowledgeNode, error) {
-	u := fmt.Sprintf("/api/course/%d/knowledge-nodes", courseID)
-	result := new(KnowledgeNodesResponse)
-	_, err := s.client.Get(ctx, u, result)
+	result, err := s.GetCourseKnowledgeGraphWithPrefix(ctx, courseID, false)
+	if err != nil {
+		return nil, err
+	}
+	return result.Items, nil
+}
+
+// GetKnowledgeNodeTreesWithPrefix returns knowledge-node trees for a course from either /api or /anonymous-api.
+func (s *Service) GetKnowledgeNodeTreesWithPrefix(ctx context.Context, courseID int, anonymous bool) ([]*KnowledgeNode, error) {
+	result, err := s.GetCourseKnowledgeGraphWithPrefix(ctx, courseID, anonymous)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +238,15 @@ func (s *Service) GetKnowledgeNodeWeekStats(ctx context.Context, courseID int, s
 
 // GetKnowledgeNodeStatisticsSummary returns statistics summary for all knowledge nodes in a course.
 func (s *Service) GetKnowledgeNodeStatisticsSummary(ctx context.Context, courseID int) (*KnowledgeNodeStatisticsSummary, error) {
-	u := fmt.Sprintf("/api/course/%d/knowledge-nodes/statistics/summary", courseID)
+	u := fmt.Sprintf("%s/course/%d/knowledge-nodes/statistics/summary", knowledgePrefix(false), courseID)
+	result := new(KnowledgeNodeStatisticsSummary)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetKnowledgeNodeStatisticsSummaryWithPrefix returns statistics summary from either /api or /anonymous-api.
+func (s *Service) GetKnowledgeNodeStatisticsSummaryWithPrefix(ctx context.Context, courseID int, anonymous bool) (*KnowledgeNodeStatisticsSummary, error) {
+	u := fmt.Sprintf("%s/course/%d/knowledge-nodes/statistics/summary", knowledgePrefix(anonymous), courseID)
 	result := new(KnowledgeNodeStatisticsSummary)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
@@ -386,9 +415,20 @@ func (s *Service) RemoveUploadKnowledgeReferenceForActivity(ctx context.Context,
 }
 
 // ParseKnowledgeNodesFromDocx parses knowledge nodes from a DOCX file.
-func (s *Service) ParseKnowledgeNodesFromDocx(ctx context.Context, body interface{}) (json.RawMessage, error) {
+func (s *Service) ParseKnowledgeNodesFromDocx(ctx context.Context, filePath string) (json.RawMessage, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	return s.ParseKnowledgeNodesFromDocxReader(ctx, file, filepath.Base(filePath))
+}
+
+// ParseKnowledgeNodesFromDocxReader parses knowledge nodes from a DOCX reader upload.
+func (s *Service) ParseKnowledgeNodesFromDocxReader(ctx context.Context, reader io.Reader, filename string) (json.RawMessage, error) {
 	var result json.RawMessage
-	_, err := s.client.Post(ctx, "/api/knowledge-nodes/parse/docx", body, &result)
+	err := s.postMultipart(ctx, "/api/knowledge-nodes/parse/docx", filename, reader, nil, &result)
 	return result, err
 }
 
@@ -431,9 +471,7 @@ func (s *Service) GetKfsCourseForestVersionStats(ctx context.Context, kfsCourseI
 
 // BatchGetPublishedForestVersionByKFSCourseIDs returns published forest versions for KFS courses.
 func (s *Service) BatchGetPublishedForestVersionByKFSCourseIDs(ctx context.Context, ids []int) ([]*KnowledgeGraphPublishedForestVersion, error) {
-	u := addQueryParams("/api/knowledge-graph/kfs-courses/-/published-forest-versions:batchGet", map[string]string{
-		"ids": intsToCSV(ids),
-	})
+	u := addArrayQueryParams("/api/knowledge-graph/kfs-courses/-/published-forest-versions:batchGet", "ids[]", ids)
 	var result []*KnowledgeGraphPublishedForestVersion
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
@@ -441,9 +479,7 @@ func (s *Service) BatchGetPublishedForestVersionByKFSCourseIDs(ctx context.Conte
 
 // BatchGetForestVersionStatsByKFSVersionIDs returns forest-version stats for KFS version IDs.
 func (s *Service) BatchGetForestVersionStatsByKFSVersionIDs(ctx context.Context, ids []int) ([]*KnowledgeGraphForestVersionStatsItem, error) {
-	u := addQueryParams("/api/knowledge-graph/forest-versions/-/stats:batchGet", map[string]string{
-		"ids": intsToCSV(ids),
-	})
+	u := addArrayQueryParams("/api/knowledge-graph/forest-versions/-/stats:batchGet", "ids[]", ids)
 	var result []*KnowledgeGraphForestVersionStatsItem
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
@@ -496,7 +532,7 @@ func (s *Service) ReplaceChinamKnowledgeGraph(ctx context.Context, courseID int)
 }
 
 // ImportKnowledgeNodes posts structured knowledge-node data into a course.
-func (s *Service) ImportKnowledgeNodes(ctx context.Context, courseID int, body interface{}) error {
+func (s *Service) ImportKnowledgeNodes(ctx context.Context, courseID int, body *ImportKnowledgeNodesRequest) error {
 	u := fmt.Sprintf("/api/courses/%d/knowledge-nodes/import", courseID)
 	_, err := s.client.Post(ctx, u, body, nil)
 	return err
@@ -504,9 +540,30 @@ func (s *Service) ImportKnowledgeNodes(ctx context.Context, courseID int, body i
 
 // ImportKnowledgeNodesByCourse imports knowledge nodes from another course.
 func (s *Service) ImportKnowledgeNodesByCourse(ctx context.Context, courseID int, body *ImportKnowledgeNodesByCourseRequest) error {
-	u := fmt.Sprintf("/api/courses/%d/knowledge-nodes/import", courseID)
-	_, err := s.client.Post(ctx, u, body, nil)
-	return err
+	fields := map[string]string{
+		"import_type":           "course",
+		"source_course_id":      strconv.Itoa(body.SourceCourseID),
+		"import_refer_resource": strconv.FormatBool(body.ImportReferResource),
+	}
+	return s.postMultipart(ctx, fmt.Sprintf("/api/courses/%d/knowledge-nodes/import", courseID), "", nil, fields, nil)
+}
+
+// ImportKnowledgeNodesByFile imports knowledge nodes from a file upload.
+func (s *Service) ImportKnowledgeNodesByFile(ctx context.Context, courseID int, filePath string, importType string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return s.ImportKnowledgeNodesByFileReader(ctx, courseID, file, filepath.Base(filePath), importType)
+}
+
+// ImportKnowledgeNodesByFileReader imports knowledge nodes from an uploaded file reader.
+func (s *Service) ImportKnowledgeNodesByFileReader(ctx context.Context, courseID int, reader io.Reader, filename string, importType string) error {
+	return s.postMultipart(ctx, fmt.Sprintf("/api/courses/%d/knowledge-nodes/import", courseID), filename, reader, map[string]string{
+		"import_type": importType,
+	}, nil)
 }
 
 // GetKnowledgeGraphEmbedURL returns the embedded cluster-graph URL for a course.
@@ -519,6 +576,14 @@ func (s *Service) GetKnowledgeGraphEmbedURL(ctx context.Context, courseID int) (
 	return result.URL, err
 }
 
+// GetKnowledgeGraphCluster returns the cluster graph payload for a course.
+func (s *Service) GetKnowledgeGraphCluster(ctx context.Context, courseID int) (KnowledgeGraphCluster, error) {
+	u := fmt.Sprintf("/api/course/%d/knowledge-graph/cluster", courseID)
+	result := make(KnowledgeGraphCluster)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // GetChinamCloudGraphEditURL returns the edit URL for a course knowledge graph.
 func (s *Service) GetChinamCloudGraphEditURL(ctx context.Context, courseID int) (string, error) {
 	u := fmt.Sprintf("/api/course/%d/knowledge-graph/edit-url", courseID)
@@ -529,6 +594,14 @@ func (s *Service) GetChinamCloudGraphEditURL(ctx context.Context, courseID int) 
 	return result.URL, err
 }
 
+// GetChinamCloudKnowledgeGraphSyncStatus returns the current sync status for a course knowledge graph.
+func (s *Service) GetChinamCloudKnowledgeGraphSyncStatus(ctx context.Context, courseID int) (KnowledgeGraphSyncStatus, error) {
+	u := fmt.Sprintf("/api/course/%d/knowledge-graph/sync-status", courseID)
+	result := make(KnowledgeGraphSyncStatus)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // GetChinamCloudResourceViewURL returns the preview URL for an external resource.
 func (s *Service) GetChinamCloudResourceViewURL(ctx context.Context, courseID int, resourceID int) (string, error) {
 	u := fmt.Sprintf("/api/course/%d/external-resource/%d/preview-url", courseID, resourceID)
@@ -537,6 +610,29 @@ func (s *Service) GetChinamCloudResourceViewURL(ctx context.Context, courseID in
 	}
 	_, err := s.client.Get(ctx, u, &result)
 	return result.URL, err
+}
+
+// GetCourseExtensionApps returns course extension apps from either /api or /anonymous-api.
+func (s *Service) GetCourseExtensionApps(ctx context.Context, courseID int, anonymous bool) ([]KnowledgeExtensionApp, error) {
+	u := fmt.Sprintf("%s/courses/%d/extension-apps", knowledgePrefix(anonymous), courseID)
+	result := new(KnowledgeExtensionAppsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	if err != nil {
+		return nil, err
+	}
+	return result.Data, nil
+}
+
+// ExportKnowledgeNodes exports knowledge nodes in the requested format and returns the blob bytes.
+func (s *Service) ExportKnowledgeNodes(ctx context.Context, courseID int, format string) ([]byte, error) {
+	u := fmt.Sprintf("/api/courses/%d/knowledge-nodes/export?format=%s", courseID, url.QueryEscape(format))
+	req, err := s.client.NewRequest(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Cache-Control", "no-cache")
+	_, data, err := s.client.DoBytes(req)
+	return data, err
 }
 
 // --- Knowledge Capture/Resource Visit ---
@@ -561,6 +657,16 @@ func (s *Service) CheckKnowledgeNodesExist(ctx context.Context, courseID int) (j
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
+}
+
+// StartKnowledgeNodesAIParse starts the AI parse SSE stream for an uploaded file.
+func (s *Service) StartKnowledgeNodesAIParse(ctx context.Context, courseID int, body *AIParseKnowledgeNodesRequest) (*http.Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodPost, fmt.Sprintf("/api/course/%d/knowledge-nodes/ai-parse", courseID), body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	return s.client.HTTPClient().Do(req)
 }
 
 // SyncKnowledgeNodesWithAI syncs knowledge nodes with AI for a course.
@@ -602,4 +708,68 @@ func intsToCSV(ids []int) string {
 		parts[i] = strconv.Itoa(id)
 	}
 	return strings.Join(parts, ",")
+}
+
+func knowledgePrefix(anonymous bool) string {
+	if anonymous {
+		return "/anonymous-api"
+	}
+	return "/api"
+}
+
+func addArrayQueryParams(urlStr string, key string, ids []int) string {
+	if len(ids) == 0 {
+		return urlStr
+	}
+	values := url.Values{}
+	for _, id := range ids {
+		values.Add(key, strconv.Itoa(id))
+	}
+	sep := "?"
+	if strings.Contains(urlStr, "?") {
+		sep = "&"
+	}
+	return urlStr + sep + values.Encode()
+}
+
+func (s *Service) postMultipart(ctx context.Context, urlStr string, filename string, reader io.Reader, fields map[string]string, v interface{}) error {
+	pr, pw := io.Pipe()
+	writer := multipart.NewWriter(pw)
+
+	go func() {
+		defer pw.Close()
+		if reader != nil {
+			part, err := writer.CreateFormFile("file", filename)
+			if err != nil {
+				pw.CloseWithError(err)
+				return
+			}
+			if _, err := io.Copy(part, reader); err != nil {
+				pw.CloseWithError(err)
+				return
+			}
+		}
+		for key, value := range fields {
+			if err := writer.WriteField(key, value); err != nil {
+				pw.CloseWithError(err)
+				return
+			}
+		}
+		_ = writer.Close()
+	}()
+
+	reqURL, err := s.client.BaseURL().Parse(urlStr)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL.String(), pr)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Accept", "application/json")
+
+	_, err = s.client.Do(req, v)
+	return err
 }

@@ -101,7 +101,7 @@ func (s *Service) ListTimetableRollcalls(ctx context.Context) (json.RawMessage, 
 
 // ListCourseRollcalls returns rollcall records for a course.
 func (s *Service) ListCourseRollcalls(ctx context.Context, courseID int) (*CourseRollcallsResponse, error) {
-	u := fmt.Sprintf("/api/courses/%d/modules/rollcalls", courseID)
+	u := fmt.Sprintf("/api/course/%d/rollcalls", courseID)
 	result := new(CourseRollcallsResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err

@@ -43,6 +43,18 @@ type SharedResourcesResponse struct {
 	model.Pagination
 }
 
+type ResourceClassificationsResponse struct {
+	Classifications []*ResourceClassification `json:"classifications"`
+}
+
+type DepartmentsResponse struct {
+	Departments []*model.Department `json:"departments"`
+}
+
+type SubjectLibFoldersResponse struct {
+	Folders []*SubjectLibFolder `json:"folders"`
+}
+
 type CoursePackagesResponse struct {
 	Items []*CoursePackage `json:"items"`
 	model.Pagination

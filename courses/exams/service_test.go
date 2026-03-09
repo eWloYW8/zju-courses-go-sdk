@@ -81,6 +81,9 @@ func TestGenerateCoursewareQuizSubjectsUsesFrontendPayload(t *testing.T) {
 		if len(body.PageRange) != 2 || body.PageRange[0] != 4 || body.PageRange[1] != 9 || !body.Stream {
 			t.Fatalf("unexpected stream/page_range: %#v", body)
 		}
+		if body.ModuleID != 18 || body.ModuleType != "subject_lib" {
+			t.Fatalf("unexpected module payload: %#v", body)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"ok":true}`))
@@ -99,10 +102,105 @@ func TestGenerateCoursewareQuizSubjectsUsesFrontendPayload(t *testing.T) {
 		QuizKnowledgePoints:    []any{"kp-1"},
 		Locale:                 "",
 		Stream:                 true,
+		ModuleID:               18,
+		ModuleType:             "subject_lib",
 		PageRange:              []int{4, 9},
 	})
 	if err != nil {
 		t.Fatalf("GenerateCoursewareQuizSubjects returned error: %v", err)
+	}
+}
+
+func TestGenerateSubjectsAndGenerateSubjectsByTextUseFrontendPayloads(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/courseware-quiz/generate-subjects":
+			var body GenerateSubjectsRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode generate-subjects body: %v", err)
+			}
+			if body.UploadID != 77 || body.ModuleID != 9 || body.ModuleType != "exam" || body.GroupID != "" {
+				t.Fatalf("unexpected generate-subjects body: %#v", body)
+			}
+			_, _ = w.Write([]byte(`{"ok":true}`))
+		case "/api/courseware-quiz/generate-subjects-by-text":
+			var body GenerateSubjectsByTextRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode generate-subjects-by-text body: %v", err)
+			}
+			if body.TextContent != "chapter summary" || body.ModuleID != 9 || body.ModuleType != "exam" || !body.Stream {
+				t.Fatalf("unexpected generate-subjects-by-text body: %#v", body)
+			}
+			_, _ = w.Write([]byte(`{"ok":true}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	if _, err := service.GenerateSubjects(ctx, &GenerateSubjectsRequest{
+		UploadID:               77,
+		ModuleID:               9,
+		ModuleType:             "exam",
+		GroupID:                "",
+		NumOfSingleSelection:   2,
+		NumOfMultipleSelection: 1,
+		PageRange:              []int{1, 3},
+	}); err != nil {
+		t.Fatalf("GenerateSubjects returned error: %v", err)
+	}
+
+	if _, err := service.GenerateSubjectsByText(ctx, &GenerateSubjectsByTextRequest{
+		TextContent: "chapter summary",
+		GenerateCoursewareQuizSubjectsRequest: GenerateCoursewareQuizSubjectsRequest{
+			ModuleID:              9,
+			ModuleType:            "exam",
+			NumOfSingleSelection:  1,
+			NumOfTrueOrFalse:      1,
+			Stream:                true,
+			BloomCognitiveDomains: []string{"apply"},
+			QuizKnowledgePoints:   []any{"kp-2"},
+		},
+	}); err != nil {
+		t.Fatalf("GenerateSubjectsByText returned error: %v", err)
+	}
+}
+
+func TestRubricHelpersUseFrontendFieldsQueries(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/api/rubrics":
+			if got := r.URL.Query().Get("fields"); got != "id,name,conditions" {
+				t.Fatalf("unexpected create rubric fields query: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"id":3,"name":"Rubric","conditions":[{"name":"Criterion","levels":[{"score":5,"description":"good"}]}]}`))
+		case r.Method == http.MethodPut && r.URL.Path == "/api/rubrics/3":
+			if got := r.URL.Query().Get("fields"); got != "id,name,conditions,engage_number,created_by" {
+				t.Fatalf("unexpected update rubric fields query: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"id":3,"name":"Rubric","engage_number":2,"created_by":{"id":9,"name":"Teacher"}}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	created, err := service.CreateRubric(ctx, map[string]any{"name": "Rubric"})
+	if err != nil || created.ID != 3 || created.Name == nil || *created.Name != "Rubric" {
+		t.Fatalf("unexpected created rubric: %#v, err=%v", created, err)
+	}
+
+	updated, err := service.UpdateRubric(ctx, 3, map[string]any{"name": "Rubric"})
+	if err != nil || updated.EngageNumber != 2 || updated.CreatedBy == nil || updated.CreatedBy.ID != 9 {
+		t.Fatalf("unexpected updated rubric: %#v, err=%v", updated, err)
 	}
 }
 
@@ -260,5 +358,47 @@ func TestSHTVUAndSubjectSaveHelpersUseFrontendEndpoints(t *testing.T) {
 	})
 	if err != nil || len(importVideoQuiz.Subjects) != 1 || importVideoQuiz.Subjects[0].ID != 5 {
 		t.Fatalf("unexpected imported video quiz subjects: %#v, err=%v", importVideoQuiz, err)
+	}
+}
+
+func TestSubjectGroupHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/exam/6/subject-groups":
+			_, _ = w.Write([]byte(`{"data":[{"id":1,"subject_type":"single_selection","sort":1}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/exam/6/subject-group":
+			var body SubjectGroupRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode create subject group body: %v", err)
+			}
+			if body.SubjectType != "multiple_selection" || body.ReferrerType != "exam" || body.ReferrerID != 6 {
+				t.Fatalf("unexpected subject group body: %#v", body)
+			}
+			_, _ = w.Write([]byte(`{"data":{"id":2,"subject_type":"multiple_selection","referrer_type":"exam","referrer_id":6}}`))
+		case r.Method == http.MethodPut && r.URL.Path == "/api/subject-group/2":
+			_, _ = w.Write([]byte(`{"data":{"id":2,"subject_type":"multiple_selection","sort":2}}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	groups, err := service.ListSubjectGroups(ctx, "exam", 6)
+	if err != nil || len(groups) != 1 || groups[0].ID != 1 {
+		t.Fatalf("unexpected subject groups: %#v, err=%v", groups, err)
+	}
+
+	created, err := service.CreateSubjectGroup(ctx, "exam", 6, &SubjectGroupRequest{SubjectType: "multiple_selection", ReferrerType: "exam", ReferrerID: 6})
+	if err != nil || created.ID != 2 || created.ReferrerID != 6 {
+		t.Fatalf("unexpected created subject group: %#v, err=%v", created, err)
+	}
+
+	updated, err := service.UpdateSubjectGroup(ctx, 2, &SubjectGroupRequest{Sort: 2})
+	if err != nil || updated.Sort != 2 {
+		t.Fatalf("unexpected updated subject group: %#v, err=%v", updated, err)
 	}
 }

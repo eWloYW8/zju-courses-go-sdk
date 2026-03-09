@@ -223,3 +223,171 @@ func TestCourseCopyAndImportHelpersUseFrontendPayloads(t *testing.T) {
 		t.Fatalf("unexpected tasks: %#v", tasks)
 	}
 }
+
+func TestOrgHeaderHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/orgs/9/lang-settings":
+			_, _ = w.Write([]byte(`{"lang_settings":["zh-CN","en-US"]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/anonymous-api/orgs/9/lang-settings":
+			_, _ = w.Write([]byte(`{"lang_settings":["zh-CN"]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/anonymous-api/orgs/9/login-settings":
+			_, _ = w.Write([]byte(`{"login_settings":{"enable_wechat":true}}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	memberLangs, err := service.GetLangSettings(ctx, 9)
+	if err != nil || len(memberLangs.LangSettings) != 2 {
+		t.Fatalf("unexpected member lang settings: %#v, err=%v", memberLangs, err)
+	}
+
+	anonymousLangs, err := service.GetLangSettingsWithPrefix(ctx, 9, true)
+	if err != nil || len(anonymousLangs.LangSettings) != 1 || anonymousLangs.LangSettings[0] != "zh-CN" {
+		t.Fatalf("unexpected anonymous lang settings: %#v, err=%v", anonymousLangs, err)
+	}
+
+	loginSettings, err := service.GetLoginSettings(ctx, 9)
+	if err != nil || loginSettings.LoginSettings["enable_wechat"] != true {
+		t.Fatalf("unexpected login settings: %#v, err=%v", loginSettings, err)
+	}
+}
+
+func TestPlanHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/org/7/org-plan-info":
+			_, _ = w.Write([]byte(`{
+				"org":{"storage_total":2048,"storage_used":512,"transfer_total":1024,"transfer_used":128},
+				"org_plan":{"id":3,"start_date":"2026-03-01","end_date":"2026-03-31","expired":false,"trial":false,"plan":{"storage_total":2048,"transfer_per_month":1024}}
+			}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/org/request/change-plan/9":
+			var body RequestChangePlanRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode change-plan body: %v", err)
+			}
+			if body.Period != "yearly" {
+				t.Fatalf("unexpected change-plan body: %#v", body)
+			}
+			_, _ = w.Write([]byte(`{"ok":true}`))
+		case r.Method == http.MethodPut && r.URL.Path == "/api/custom-operation":
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	info, err := service.GetOrgPlanInfo(ctx, 7)
+	if err != nil {
+		t.Fatalf("GetOrgPlanInfo returned error: %v", err)
+	}
+	if info.Org == nil || info.Org.StorageTotal != 2048 || info.OrgPlan == nil || info.OrgPlan.Plan == nil || info.OrgPlan.Plan.TransferPerMonth != 1024 {
+		t.Fatalf("unexpected org plan info: %#v", info)
+	}
+
+	if _, err := service.RequestChangePlan(ctx, 9, &RequestChangePlanRequest{Period: "yearly"}); err != nil {
+		t.Fatalf("RequestChangePlan returned error: %v", err)
+	}
+	if err := service.WGAdminOperateRequest(ctx, "/api/custom-operation"); err != nil {
+		t.Fatalf("WGAdminOperateRequest returned error: %v", err)
+	}
+}
+
+func TestDepartmentAndOutlineSettingHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/departments-for-user":
+			_, _ = w.Write([]byte(`{"departments":[{"id":1,"name":"计算机学院"}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/source-department-code-for-user":
+			_, _ = w.Write([]byte(`{"department_code":"CS"}`))
+		case r.Method == http.MethodPut && r.URL.Path == "/api/user/department":
+			var body UpdateUserDepartmentRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode user/department body: %v", err)
+			}
+			if body.DepartmentID != 7 {
+				t.Fatalf("unexpected user/department body: %#v", body)
+			}
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodGet && r.URL.Path == "/api/outline-setting":
+			_, _ = w.Write([]byte(`{"id":3,"formatted_options":[{"key":"course_objective","title":"课程目标","required":true}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/outline-setting/3":
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodPut && r.URL.Path == "/api/outline-setting/3":
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodPut && r.URL.Path == "/api/outline-setting/3/sort":
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodDelete && r.URL.Path == "/api/outline-setting/3/option/course_objective":
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodPut && r.URL.Path == "/api/outline-setting/toggle":
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodPut && r.URL.Path == "/api/outline-setting/3/required-options":
+			var body SaveOutlineRequiredOptionsRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode required-options body: %v", err)
+			}
+			if len(body.RequiredOptions) != 2 || body.RequiredOptions[0] != "course_objective" {
+				t.Fatalf("unexpected required-options body: %#v", body)
+			}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	departments, err := service.ListDepartmentsForUser(ctx)
+	if err != nil || len(departments.Departments) != 1 || departments.Departments[0].Name != "计算机学院" {
+		t.Fatalf("unexpected departments-for-user: %#v, err=%v", departments, err)
+	}
+
+	sourceCode, err := service.GetSourceDepartmentCodeForUser(ctx)
+	if err != nil || sourceCode.DepartmentCode != "CS" {
+		t.Fatalf("unexpected source department code: %#v, err=%v", sourceCode, err)
+	}
+
+	if err := service.UpdateUserDepartment(ctx, &UpdateUserDepartmentRequest{DepartmentID: 7}); err != nil {
+		t.Fatalf("UpdateUserDepartment returned error: %v", err)
+	}
+
+	outlineSetting, err := service.GetOutlineSetting(ctx)
+	if err != nil || outlineSetting.ID != 3 || len(outlineSetting.FormattedOptions) != 1 || outlineSetting.FormattedOptions[0].Key != "course_objective" {
+		t.Fatalf("unexpected outline setting: %#v, err=%v", outlineSetting, err)
+	}
+
+	if err := service.AddOutlineSetting(ctx, 3, map[string]any{"key": "course_objective"}); err != nil {
+		t.Fatalf("AddOutlineSetting returned error: %v", err)
+	}
+	if err := service.UpdateOutlineSetting(ctx, 3, map[string]any{"title": "课程目标"}); err != nil {
+		t.Fatalf("UpdateOutlineSetting returned error: %v", err)
+	}
+	if err := service.SortOutlineSetting(ctx, 3, map[string]any{"formatted_options": []string{"course_objective"}}); err != nil {
+		t.Fatalf("SortOutlineSetting returned error: %v", err)
+	}
+	if err := service.DeleteOutlineSettingOption(ctx, 3, "course_objective"); err != nil {
+		t.Fatalf("DeleteOutlineSettingOption returned error: %v", err)
+	}
+	if err := service.ToggleOutlineSetting(ctx, map[string]any{"enabled": true}); err != nil {
+		t.Fatalf("ToggleOutlineSetting returned error: %v", err)
+	}
+	if err := service.SaveOutlineRequiredOptions(ctx, 3, &SaveOutlineRequiredOptionsRequest{
+		RequiredOptions: []string{"course_objective", "teaching_schedule"},
+	}); err != nil {
+		t.Fatalf("SaveOutlineRequiredOptions returned error: %v", err)
+	}
+}

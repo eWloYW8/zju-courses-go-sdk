@@ -48,10 +48,12 @@ type TodoItem struct {
 	Title         string  `json:"title"`
 	Type          string  `json:"type"`
 	CourseID      int     `json:"course_id"`
+	CourseType    int     `json:"course_type,omitempty"`
 	CourseName    string  `json:"course_name"`
 	CourseCode    string  `json:"course_code,omitempty"`
 	StartTime     string  `json:"start_time,omitempty"`
 	EndTime       string  `json:"end_time,omitempty"`
+	SurveyURL     string  `json:"survey_url,omitempty"`
 	IsLocked      bool    `json:"is_locked,omitempty"`
 	IsStudent     bool    `json:"is_student,omitempty"`
 	NotScoredNum  int     `json:"not_scored_num,omitempty"`
@@ -65,6 +67,7 @@ type Bulletin struct {
 	Title     string          `json:"title,omitempty"`
 	Content   string          `json:"content,omitempty"`
 	CourseID  int             `json:"course_id,omitempty"`
+	Course    *model.Course   `json:"course,omitempty"`
 	CreatedAt string          `json:"created_at,omitempty"`
 	UpdatedAt string          `json:"updated_at,omitempty"`
 	CreatedBy *model.User     `json:"created_by,omitempty"`

@@ -23,3 +23,13 @@ type ListSharedResourcesParams struct {
 	PageSize   int
 	Conditions string
 }
+
+type ListHomepageSharedResourcesParams struct {
+	DepartmentID     int
+	ClassificationID int
+}
+
+type ListRecentUsedSharedResourcesParams struct {
+	ClassificationID string
+	DepartmentIDs    string
+}

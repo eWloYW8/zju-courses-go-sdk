@@ -37,7 +37,14 @@ func (s *Service) DeleteInteraction(ctx context.Context, interactionID int) erro
 // VoteInteraction votes on an interaction.
 func (s *Service) VoteInteraction(ctx context.Context, interactionID int, body interface{}) error {
 	u := fmt.Sprintf("/api/courses/interactions/vote/%d", interactionID)
-	_, err := s.client.Post(ctx, u, body, nil)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// UpdateInteractionScore updates grading data for a scored interaction.
+func (s *Service) UpdateInteractionScore(ctx context.Context, interactionID int, body *UpdateInteractionScoreRequest) error {
+	u := fmt.Sprintf("/api/courses/interactions/%d/score", interactionID)
+	_, err := s.client.Put(ctx, u, body, nil)
 	return err
 }
 

@@ -5,6 +5,10 @@ type ImportKfsCourseRequest struct {
 	KFSVersionID int `json:"kfs_version_id"`
 }
 
+type ImportKnowledgeNodesRequest struct {
+	Data any `json:"data"`
+}
+
 type TeachingObjectivesRequest struct {
 	TeachingObjectives []*TeachingObjective `json:"teaching_objectives"`
 }
@@ -49,4 +53,8 @@ type UpdateKnowledgeGraphSourceRequest struct {
 type ImportKnowledgeNodesByCourseRequest struct {
 	SourceCourseID      int  `json:"source_course_id"`
 	ImportReferResource bool `json:"import_refer_resource"`
+}
+
+type AIParseKnowledgeNodesRequest struct {
+	UploadID int `json:"upload_id"`
 }

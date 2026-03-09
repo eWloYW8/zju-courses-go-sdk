@@ -50,3 +50,7 @@ type KnowledgeNodeStudentActivitiesResponse struct {
 	Items []*KnowledgeNodeStudentActivityStat `json:"items"`
 	model.Pagination
 }
+
+type KnowledgeExtensionAppsResponse struct {
+	Data []KnowledgeExtensionApp `json:"data,omitempty"`
+}

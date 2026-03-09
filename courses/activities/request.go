@@ -1,5 +1,7 @@
 package activities
 
+import "github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+
 type CreateActivityRequest = Activity
 
 type UpdateActivityRequest = Activity
@@ -52,4 +54,37 @@ type CreateCommentRequest struct {
 type OperateCommentRequest struct {
 	CommentID int    `json:"comment_id"`
 	Action    string `json:"action"`
+}
+
+type CommentListParams struct {
+	Page       int
+	PageSize   int
+	OrderKey   string
+	Order      string
+	Conditions any
+}
+
+type ActivityScoreRecordsParams struct {
+	Page     int
+	PageSize int
+}
+
+type ClassinJoinURLParams struct {
+	CourseID   int
+	ActivityID int
+	UserID     int
+}
+
+type ClassinWebcastURLParams struct {
+	CourseID   int
+	ActivityID int
+}
+
+type UpdateActivityResourceRequest map[string]any
+
+type ScoreRecordsPage struct {
+	Items []*ScoreRecord
+	model.Pagination
+	Start int `json:"start,omitempty"`
+	End   int `json:"end,omitempty"`
 }

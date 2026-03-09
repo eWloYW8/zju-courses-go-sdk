@@ -28,3 +28,11 @@ type CourseClassroomListResponse struct {
 type SubmittedExamsResponse struct {
 	ExamIDs []int `json:"exam_ids"`
 }
+
+type SubjectGroupsResponse struct {
+	Data []*SubjectGroup `json:"data,omitempty"`
+}
+
+type SubjectGroupResponse struct {
+	Data *SubjectGroup `json:"data,omitempty"`
+}
