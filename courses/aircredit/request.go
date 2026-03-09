@@ -4,6 +4,19 @@ type AssignCreditsRequest map[string]any
 type UpdateCreditsRequest map[string]any
 type OptimizeTextRequest map[string]any
 type ExportAIPPTUserUsageRequest map[string]any
+type LessonPlanStreamRequest map[string]any
+
+type UserTokenParams struct {
+	ModuleID     int
+	ModuleType   string
+	ResourceName string
+	UploadID     int
+}
+
+type ExportLessonPlanRequest struct {
+	Chapters   any `json:"chapters,omitempty"`
+	TemplateID int `json:"template_id,omitempty"`
+}
 
 type ListCreditStatesParams struct {
 	Page       int

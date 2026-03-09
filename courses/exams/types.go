@@ -7,6 +7,11 @@ type SubjectLib struct {
 	Title         string        `json:"title,omitempty"`
 	ParentID      int           `json:"parent_id,omitempty"`
 	IsFolder      bool          `json:"is_folder,omitempty"`
+	IsShared      bool          `json:"is_shared,omitempty"`
+	Nums          int           `json:"nums,omitempty"`
+	Type          string        `json:"type,omitempty"`
+	CreatedAt     string        `json:"created_at,omitempty"`
+	UpdatedAt     string        `json:"updated_at,omitempty"`
 	Children      []*SubjectLib `json:"children,omitempty"`
 	SubjectsCount int           `json:"subjects_count,omitempty"`
 }
@@ -41,6 +46,11 @@ type CoursewareQuizUpdateResponse struct {
 	QuizID int `json:"quiz_id"`
 }
 
+type CoursewareQuizCreateResponse struct {
+	ID     int `json:"id,omitempty"`
+	QuizID int `json:"quiz_id,omitempty"`
+}
+
 type SHTVUModule struct {
 	ID       int            `json:"id,omitempty"`
 	Name     string         `json:"name,omitempty"`
@@ -64,6 +74,15 @@ type SHTVUSubjectTypeInfo struct {
 
 type SHTVUSubjectTypesInfoResponse struct {
 	SubjectTypesInfo []*SHTVUSubjectTypeInfo `json:"subject_types_info,omitempty"`
+}
+
+type ExamPaperZip struct {
+	ID        int     `json:"id,omitempty"`
+	Key       string  `json:"key,omitempty"`
+	Status    string  `json:"status,omitempty"`
+	Name      string  `json:"name,omitempty"`
+	Size      string  `json:"size,omitempty"`
+	CreatedAt *string `json:"created_at,omitempty"`
 }
 
 // Exam represents an exam/quiz activity.
@@ -265,4 +284,104 @@ type CoursewareQuiz struct {
 	SubjectsCount     int `json:"subjects_count,omitempty"`
 	UploadReferenceID int `json:"upload_reference_id,omitempty"`
 	SubmittedTimes    int `json:"submitted_times,omitempty"`
+}
+
+type CoursewareQuizSubmission struct {
+	SubmitTimes int                                  `json:"submit_times,omitempty"`
+	Submission  *CoursewareQuizStudentSubmissionMeta `json:"submission,omitempty"`
+}
+
+type CoursewareQuizStudentSubmissionMeta struct {
+	NonCustom                    bool `json:"non_custom,omitempty"`
+	SubmitTimes                  int  `json:"submit_times,omitempty"`
+	SubmittedTimes               int  `json:"submitted_times,omitempty"`
+	AnnounceAnswerAndExplanation bool `json:"announce_answer_and_explanation,omitempty"`
+	ID                           int  `json:"id,omitempty"`
+}
+
+type AiQuizStatistic struct {
+	SubjectsStatistic []*StatisticSubject `json:"subjects_statistic,omitempty"`
+	Summary           *StatisticSummary   `json:"summary,omitempty"`
+	AnalysisStatus    *StatisticAnalysis  `json:"analysis,omitempty"`
+}
+
+type StatisticSummary struct {
+	CorrectRate    *float64 `json:"correct_rate,omitempty"`
+	StudentsCount  int      `json:"students_count,omitempty"`
+	SubmissionRate *float64 `json:"submission_rate,omitempty"`
+	SubmitterCount int      `json:"submitter_count,omitempty"`
+}
+
+type StatisticOption struct {
+	OptionID    int `json:"option_id,omitempty"`
+	Sort        int `json:"sort,omitempty"`
+	ChosenCount int `json:"chosen_count,omitempty"`
+}
+
+type StatisticAnswer struct {
+	Sort         int `json:"sort,omitempty"`
+	CorrectCount int `json:"correct_count,omitempty"`
+}
+
+type StatisticSubject struct {
+	SubjectID           int                `json:"subject_id,omitempty"`
+	CorrectCount        int                `json:"correct_count,omitempty"`
+	CorrectRate         string             `json:"correct_rate,omitempty"`
+	WrongCount          int                `json:"wrong_count,omitempty"`
+	WrongRate           string             `json:"wrong_rate,omitempty"`
+	SubmittedCount      int                `json:"submitted_count,omitempty"`
+	UnsubmittedCount    int                `json:"unsubmitted_count,omitempty"`
+	OptionsStatistic    []*StatisticOption `json:"options_statistic,omitempty"`
+	AnswersStatistic    []*StatisticAnswer `json:"answers_statistic,omitempty"`
+	QuizKnowledgePoints []any              `json:"quiz_knowledge_points,omitempty"`
+}
+
+type StatisticAnalysis struct {
+	LastAnalyzedAt string `json:"last_analyzed_at,omitempty"`
+	Reanalysis     bool   `json:"reanalysis,omitempty"`
+}
+
+type UserAnswerSubjectStatistic struct {
+	ID               int                            `json:"id,omitempty"`
+	Type             string                         `json:"type,omitempty"`
+	Description      string                         `json:"description,omitempty"`
+	CorrectCount     int                            `json:"correct_count,omitempty"`
+	CorrectRate      string                         `json:"correct_rate,omitempty"`
+	WrongCount       int                            `json:"wrong_count,omitempty"`
+	WrongRate        string                         `json:"wrong_rate,omitempty"`
+	SubmittedCount   int                            `json:"submitted_count,omitempty"`
+	UnsubmittedCount int                            `json:"unsubmitted_count,omitempty"`
+	Options          []*UserAnswerSubjectOptionStat `json:"options,omitempty"`
+	OriginIndex      int                            `json:"origin_index,omitempty"`
+}
+
+type UserAnswerSubjectOptionStat struct {
+	ID          int    `json:"id,omitempty"`
+	Content     string `json:"content,omitempty"`
+	IsAnswer    bool   `json:"is_answer,omitempty"`
+	Type        string `json:"type,omitempty"`
+	Sort        int    `json:"sort,omitempty"`
+	ChosenCount int    `json:"chosen_count,omitempty"`
+}
+
+type ClassroomSubmission map[string]any
+
+type ClassroomSubmissionCountStatus map[string]any
+
+type ClassroomExaminee struct {
+	ID             int                   `json:"id,omitempty"`
+	Name           string                `json:"name,omitempty"`
+	UserNo         string                `json:"user_no,omitempty"`
+	Nickname       *string               `json:"nickname,omitempty"`
+	AvatarSmallURL string                `json:"avatar_small_url,omitempty"`
+	AvatarBigURL   string                `json:"avatar_big_url,omitempty"`
+	Department     *model.Department     `json:"department,omitempty"`
+	Grade          *model.Grade          `json:"grade,omitempty"`
+	Klass          *model.Class          `json:"klass,omitempty"`
+	Score          any                   `json:"score,omitempty"`
+	Status         any                   `json:"status,omitempty"`
+	Submitted      bool                  `json:"submitted,omitempty"`
+	OpenedAt       *string               `json:"opened_at,omitempty"`
+	SubmitTime     *string               `json:"submit_time,omitempty"`
+	Submissions    []ClassroomSubmission `json:"submissions,omitempty"`
 }

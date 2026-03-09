@@ -54,11 +54,35 @@ type SyncFromURPRequest struct {
 	CourseIDs []int `json:"course_ids"`
 }
 
-type SyncBlueprintRequest map[string]any
+type SyncBlueprintRequest struct {
+	Sources         any   `json:"sources,omitempty"`
+	TargetCourseIDs []int `json:"target_course_ids,omitempty"`
+	Publish         *bool `json:"publish,omitempty"`
+}
 
 type BlueprintActivityRef struct {
 	ID   int    `json:"id"`
 	Type string `json:"type"`
+}
+
+type BindBlueprintSubCoursesRequest struct {
+	SubCourseIDs []int `json:"sub_course_ids,omitempty"`
+}
+
+type ListBlueprintSubCoursesParams struct {
+	Keyword    string
+	SourceID   int
+	SourceType string
+}
+
+type BlueprintPrerequisiteSource map[string]any
+
+type CheckBlueprintPrerequisitesRequest struct {
+	Sources []BlueprintPrerequisiteSource `json:"sources,omitempty"`
+}
+
+type RenameBlueprintSubCourseRequest struct {
+	Name string `json:"name,omitempty"`
 }
 
 type ListCourseHostsParams struct {
@@ -129,6 +153,23 @@ type UpdateStudentPerformanceScoreRequest struct {
 
 type CourseAdvanceSettingRequest struct {
 	Params map[string]any `json:"params,omitempty"`
+}
+
+type WarningStudentsParams struct {
+	Fields     string
+	Conditions any
+}
+
+type ListQuestionnairesParams struct {
+	Page       int
+	PageSize   int
+	Conditions any
+}
+
+type ListAllActivitiesByModuleIDsParams struct {
+	ModuleIDs               []int
+	ActivityTypes           string
+	DisableLoadingAnimation bool
 }
 
 type ActivityScorePercentageItem struct {

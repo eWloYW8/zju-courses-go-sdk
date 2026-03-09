@@ -67,3 +67,5 @@ type PublicCapturesResponse struct {
 type CoursesIdentitiesResponse struct {
 	CoursesIdentities []*Course `json:"courses_identities"`
 }
+
+type UserEsignInfoResponse map[string]any

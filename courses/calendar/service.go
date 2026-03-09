@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles calendar-related API operations.
@@ -23,7 +23,11 @@ type Service struct {
 
 // ListCalendarEvents returns calendar events.
 func (s *Service) ListCalendarEvents(ctx context.Context, params map[string]string) (json.RawMessage, error) {
-	u := addQueryParams("/api/calendar-events", params)
+	query := map[string]string{"no-intercept": "true"}
+	for k, v := range params {
+		query[k] = v
+	}
+	u := addQueryParams("/api/calendar-events", query)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
@@ -78,7 +82,11 @@ func (s *Service) GetCalendarAlerts(ctx context.Context) (json.RawMessage, error
 
 // ListTimetables returns calendar timetables.
 func (s *Service) ListTimetables(ctx context.Context, params map[string]string) (json.RawMessage, error) {
-	u := addQueryParams("/api/calendar-timetables", params)
+	query := map[string]string{"no-intercept": "true"}
+	for k, v := range params {
+		query[k] = v
+	}
+	u := addQueryParams("/api/calendar-timetables", query)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
@@ -93,25 +101,41 @@ func (s *Service) GetTimetable(ctx context.Context, timetableID int) (*CalendarT
 }
 
 // CreateTimetable creates a new timetable entry.
-func (s *Service) CreateTimetable(ctx context.Context, body interface{}) (*CalendarTimetable, error) {
-	result := new(CalendarTimetable)
+func (s *Service) CreateTimetable(ctx context.Context, body interface{}) (*TimetableMutationResponse, error) {
+	result := new(TimetableMutationResponse)
 	_, err := s.client.Post(ctx, "/api/calendar-timetables", body, result)
 	return result, err
 }
 
 // UpdateTimetable updates a timetable entry.
-func (s *Service) UpdateTimetable(ctx context.Context, timetableID int, body interface{}) (*CalendarTimetable, error) {
+func (s *Service) UpdateTimetable(ctx context.Context, timetableID int, body interface{}) (*TimetableMutationResponse, error) {
 	u := fmt.Sprintf("/api/calendar-timetables/%d", timetableID)
-	result := new(CalendarTimetable)
+	result := new(TimetableMutationResponse)
 	_, err := s.client.Put(ctx, u, body, result)
 	return result, err
 }
 
 // DeleteTimetable deletes a timetable entry.
-func (s *Service) DeleteTimetable(ctx context.Context, timetableID int) error {
-	u := fmt.Sprintf("/api/calendar-timetables/%d", timetableID)
-	_, err := s.client.Delete(ctx, u, nil)
-	return err
+func (s *Service) DeleteTimetable(ctx context.Context, timetableID int, body *DeleteTimetableRequest) (*TimetableMutationResponse, error) {
+	u := fmt.Sprintf("/api/calendar-timetables/%d/delete", timetableID)
+	result := new(TimetableMutationResponse)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
+}
+
+// ListCalendarDepartments returns departments used by the calendar/team-teaching popup.
+func (s *Service) ListCalendarDepartments(ctx context.Context) (*CalendarDepartmentsResponse, error) {
+	result := new(CalendarDepartmentsResponse)
+	_, err := s.client.Get(ctx, "/api/departments?no-intercept=true", &result)
+	return result, err
+}
+
+// ListCalendarUserCourses returns course options for a user's calendar-event binding popup.
+func (s *Service) ListCalendarUserCourses(ctx context.Context, userID int) (*CalendarUserCoursesResponse, error) {
+	u := fmt.Sprintf("/api/calendar-events/users/%d/courses?no-intercept=true", userID)
+	result := new(CalendarUserCoursesResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
 }
 
 // --- Teaching Calendar ---
@@ -134,24 +158,23 @@ func (s *Service) GetTeachingCalendar(ctx context.Context, calendarID int) (json
 // --- Calendar Meeting ---
 
 // CreateCalendarMeeting creates a calendar meeting.
-func (s *Service) CreateCalendarMeeting(ctx context.Context, body interface{}) (json.RawMessage, error) {
-	var result json.RawMessage
+func (s *Service) CreateCalendarMeeting(ctx context.Context, body interface{}) (*CalendarMeetingMutationResponse, error) {
+	result := new(CalendarMeetingMutationResponse)
 	_, err := s.client.Post(ctx, "/api/calendar-meeting", body, &result)
 	return result, err
 }
 
-// GetCalendarMeeting returns a specific calendar meeting.
-func (s *Service) GetCalendarMeeting(ctx context.Context, meetingID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/calendar-meeting/%d", meetingID)
+// GetCalendarMeeting returns the calendar-meeting payload used by the frontend popup.
+func (s *Service) GetCalendarMeeting(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	_, err := s.client.Get(ctx, "/api/calendar-meeting", &result)
 	return result, err
 }
 
 // UpdateCalendarMeeting updates a calendar meeting.
-func (s *Service) UpdateCalendarMeeting(ctx context.Context, meetingID int, body interface{}) (json.RawMessage, error) {
+func (s *Service) UpdateCalendarMeeting(ctx context.Context, meetingID int, body interface{}) (*CalendarMeetingMutationResponse, error) {
 	u := fmt.Sprintf("/api/calendar-meeting/%d", meetingID)
-	var result json.RawMessage
+	result := new(CalendarMeetingMutationResponse)
 	_, err := s.client.Put(ctx, u, body, &result)
 	return result, err
 }
@@ -165,17 +188,30 @@ func (s *Service) DeleteCalendarMeeting(ctx context.Context, meetingID int) erro
 
 // ListManagementCalendarMeetings returns management calendar meetings.
 func (s *Service) ListManagementCalendarMeetings(ctx context.Context, opts *model.ListOptions) (json.RawMessage, error) {
+	return s.ListManagementCalendarMeetingsWithBody(ctx, opts, nil)
+}
+
+// ListManagementCalendarMeetingsWithBody returns management calendar meetings using the frontend POST API.
+func (s *Service) ListManagementCalendarMeetingsWithBody(ctx context.Context, opts *model.ListOptions, body interface{}) (json.RawMessage, error) {
 	u := addListOptions("/api/management/calendar-meeting", opts)
 	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	_, err := s.client.Post(ctx, u, body, &result)
 	return result, err
 }
 
 // ExportCalendarMeetings exports calendar meetings to Excel.
-func (s *Service) ExportCalendarMeetings(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/management/calendar-meeting/excel", &result)
-	return result, err
+func (s *Service) ExportCalendarMeetings(ctx context.Context) ([]byte, error) {
+	return s.ExportCalendarMeetingsWithBody(ctx, nil)
+}
+
+// ExportCalendarMeetingsWithBody exports calendar meetings to Excel using the frontend POST API.
+func (s *Service) ExportCalendarMeetingsWithBody(ctx context.Context, body interface{}) ([]byte, error) {
+	req, err := s.client.NewRequest(ctx, "POST", "/api/management/calendar-meeting/excel", body)
+	if err != nil {
+		return nil, err
+	}
+	_, data, err := s.client.DoBytes(req)
+	return data, err
 }
 
 func addListOptions(urlStr string, opts *model.ListOptions) string {

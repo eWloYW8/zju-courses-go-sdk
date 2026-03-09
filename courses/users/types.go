@@ -77,11 +77,21 @@ type AssociationCodeResponse struct {
 }
 
 type ChatMessage struct {
-	Message   string         `json:"message,omitempty"`
-	IsReply   bool           `json:"is_reply,omitempty"`
-	Type      string         `json:"type,omitempty"`
-	Data      map[string]any `json:"data,omitempty"`
-	SessionID string         `json:"session_id,omitempty"`
+	Message   string   `json:"message,omitempty"`
+	IsReply   bool     `json:"is_reply,omitempty"`
+	Type      string   `json:"type,omitempty"`
+	Data      []string `json:"data,omitempty"`
+	SessionID string   `json:"session_id,omitempty"`
+}
+
+type NotebookGradingItem struct {
+	NotebookID  int     `json:"notebook_id,omitempty"`
+	SubjectID   int     `json:"subject_id,omitempty"`
+	Explanation *string `json:"explanation,omitempty"`
+}
+
+type NotebookGradingResponse struct {
+	Items []*NotebookGradingItem `json:"items,omitempty"`
 }
 
 type Note struct {

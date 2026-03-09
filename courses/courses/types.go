@@ -154,6 +154,12 @@ type Section struct {
 	Name string `json:"name,omitempty"`
 }
 
+type EntryRefer struct {
+	ID         int    `json:"id"`
+	Name       string `json:"name,omitempty"`
+	Definition string `json:"definition,omitempty"`
+}
+
 type NavSetting struct {
 	Type        string `json:"type"`
 	Parent      string `json:"parent,omitempty"`

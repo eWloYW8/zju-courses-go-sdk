@@ -64,6 +64,55 @@ type HomeworkLog map[string]any
 
 type DuplicateDetectRateItem map[string]any
 
+type DuplicateDetectTask struct {
+	Status    string                     `json:"status,omitempty"`
+	CreatedAt string                     `json:"created_at,omitempty"`
+	Input     *DuplicateDetectTaskInput  `json:"input,omitempty"`
+	Output    map[string][]int           `json:"output,omitempty"`
+	TaskItems []*DuplicateDetectTaskItem `json:"task_items,omitempty"`
+}
+
+type DuplicateDetectTaskInput struct {
+	Config *DuplicateDetectTaskConfig `json:"config,omitempty"`
+}
+
+type DuplicateDetectTaskConfig struct {
+	InPlatform *DuplicateDetectTaskInPlatformConfig `json:"in_platform,omitempty"`
+}
+
+type DuplicateDetectTaskInPlatformConfig struct {
+	CheckWithinCurrentHomework bool `json:"check_within_current_homework,omitempty"`
+	CheckWithinHomeworkLibrary bool `json:"check_within_homework_library,omitempty"`
+	CheckWithinHistoryHomework bool `json:"check_within_history_homework,omitempty"`
+}
+
+type DuplicateDetectTaskItem struct {
+	ID       string                     `json:"_id,omitempty"`
+	KeyB     string                     `json:"key_b,omitempty"`
+	DocBData *DuplicateDetectDocument   `json:"doc_b_data,omitempty"`
+	Result   []DuplicateDetectTaskMatch `json:"result,omitempty"`
+}
+
+type DuplicateDetectTaskMatch [][]int
+
+type DuplicateDetectDocument struct {
+	ID   string                       `json:"id,omitempty"`
+	Key  string                       `json:"key,omitempty"`
+	Name string                       `json:"name,omitempty"`
+	Meta *DuplicateDetectDocumentMeta `json:"meta,omitempty"`
+}
+
+type DuplicateDetectDocumentMeta struct {
+	Type   string   `json:"type,omitempty"`
+	Source []string `json:"source,omitempty"`
+	Time   string   `json:"time,omitempty"`
+}
+
+type DuplicateDetectReportDownloadInfo struct {
+	Status      string `json:"status,omitempty"`
+	DownloadURL string `json:"download_url,omitempty"`
+}
+
 type InProgressHomework struct {
 	ID         int     `json:"id"`
 	CourseID   int     `json:"course_id,omitempty"`

@@ -24,6 +24,9 @@ func TestFrontendActivityHelpersUseVerifiedEndpoints(t *testing.T) {
 			if got := r.URL.Query().Get("course_id"); got != "9" {
 				t.Fatalf("unexpected course_id: %q", got)
 			}
+			if got := r.URL.Query().Get("no-intercept"); got != "true" {
+				t.Fatalf("unexpected no-intercept: %q", got)
+			}
 			_, _ = w.Write([]byte(`{"completion_criteria":[{"id":1,"completion_criterion_type":"score","value":60}],"has_completion_criterion":true}`))
 		case r.Method == http.MethodGet && r.URL.Path == "/api/courses/9/activities":
 			_, _ = w.Write([]byte(`{"activities":[{"id":3,"title":"A1","type":"homework"}]}`))
@@ -140,6 +143,100 @@ func TestFrontendActivityHelpersUseVerifiedEndpoints(t *testing.T) {
 	}
 	if err := service.DeleteActivityResource(ctx, 12, 7); err != nil {
 		t.Fatalf("DeleteActivityResource returned error: %v", err)
+	}
+}
+
+func TestActivityStateAndLicenseHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/api/course/activities-read/11":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode activity-read body: %v", err)
+			}
+			if body["progress"] != float64(80) {
+				t.Fatalf("unexpected activity-read body: %#v", body)
+			}
+			_, _ = w.Write([]byte(`{"logged":true}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/activities/11/completion-criteria":
+			if got := r.URL.Query().Get("activity_type"); got != "homework" {
+				t.Fatalf("unexpected activity_type: %q", got)
+			}
+			if got := r.URL.Query().Get("course_id"); got != "9" {
+				t.Fatalf("unexpected course_id: %q", got)
+			}
+			if got := r.URL.Query().Get("no-intercept"); got != "true" {
+				t.Fatalf("unexpected no-intercept: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"completion_criteria":[{"id":2}],"has_completion_criterion":true}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/activity/11/submission-number":
+			_, _ = w.Write([]byte(`{"submission_number":12}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/activity/11/has-reviewed-inter-score":
+			_, _ = w.Write([]byte(`{"has_reviewed_inter_score":true}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/activity/11/first-submission-time":
+			_, _ = w.Write([]byte(`{"first_submission_time":"2026-03-01 12:00:00"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/activity/11/is-inter-review-started":
+			_, _ = w.Write([]byte(`{"is_started":true}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/activity/11/is-intra-review-started":
+			_, _ = w.Write([]byte(`{"is_started":false}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/activity/11/is-homework-expired":
+			_, _ = w.Write([]byte(`{"is_expired":false}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/activities/11/uploads-license":
+			_, _ = w.Write([]byte(`{"allow_cc_license":true}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/online-videos/11/activity-read-count":
+			_, _ = w.Write([]byte(`{"read_count":33}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/activities/11/web-link-scores":
+			_, _ = w.Write([]byte(`{"scores":[{"student_id":1,"score":90}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/activities/11/virtual-experiment-scores":
+			_, _ = w.Write([]byte(`{"scores":[{"student_id":1,"score":95}]}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	if logged, err := service.LogActivityRead(ctx, 11, map[string]any{"progress": 80}); err != nil || logged["logged"] != true {
+		t.Fatalf("unexpected LogActivityRead result: %#v, err=%v", logged, err)
+	}
+	if criteria, err := service.GetActivityCompletionCriteriaDetail(ctx, 11, &ActivityCompletionCriteriaDetailQuery{
+		ActivityType: "homework",
+		CourseID:     9,
+	}); err != nil || !criteria.HasCompletionCriterion || len(criteria.CompletionCriteria) != 1 {
+		t.Fatalf("unexpected activity completion criteria detail: %#v, err=%v", criteria, err)
+	}
+	if resp, err := service.GetSubmissionNumber(ctx, 11); err != nil || resp["submission_number"] != float64(12) {
+		t.Fatalf("unexpected submission number: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.HasReviewedInterScore(ctx, 11); err != nil || resp["has_reviewed_inter_score"] != true {
+		t.Fatalf("unexpected reviewed inter score: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetHomeworkFirstSubmissionTime(ctx, 11); err != nil || resp["first_submission_time"] != "2026-03-01 12:00:00" {
+		t.Fatalf("unexpected first submission time: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.IsInterReviewStarted(ctx, 11); err != nil || resp["is_started"] != true {
+		t.Fatalf("unexpected inter review state: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.IsIntraReviewStarted(ctx, 11); err != nil || resp["is_started"] != false {
+		t.Fatalf("unexpected intra review state: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.IsHomeworkExpired(ctx, 11); err != nil || resp["is_expired"] != false {
+		t.Fatalf("unexpected homework expiry state: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetActivityUploadsLicenseInfo(ctx, 11); err != nil || resp["allow_cc_license"] != true {
+		t.Fatalf("unexpected uploads-license response: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetOnlineVideoActivityReadCount(ctx, 11); err != nil || resp["read_count"] != float64(33) {
+		t.Fatalf("unexpected online-video read count: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetWebLinkScores(ctx, 11); err != nil || len(resp["scores"].([]any)) != 1 {
+		t.Fatalf("unexpected web-link scores: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetVirtualExperimentScores(ctx, 11); err != nil || len(resp["scores"].([]any)) != 1 {
+		t.Fatalf("unexpected virtual-experiment scores: %#v, err=%v", resp, err)
 	}
 }
 

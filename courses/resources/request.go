@@ -22,6 +22,7 @@ type ListSharedResourcesParams struct {
 	Page       int
 	PageSize   int
 	Conditions string
+	Fields     string
 }
 
 type ListHomepageSharedResourcesParams struct {

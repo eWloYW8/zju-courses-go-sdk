@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
 // Service handles feedback-related API operations.
@@ -27,11 +27,27 @@ func (s *Service) GetFeedbackActivity(ctx context.Context, activityID int) (json
 	return result, err
 }
 
+// GetFeedbackActivityTyped returns a feedback activity with the frontend activity model.
+func (s *Service) GetFeedbackActivityTyped(ctx context.Context, activityID int) (*FeedbackActivity, error) {
+	u := fmt.Sprintf("/api/feedback-activities/%d", activityID)
+	result := new(FeedbackActivity)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // CreateFeedbackActivity creates a feedback activity.
 func (s *Service) CreateFeedbackActivity(ctx context.Context, courseID int, body interface{}) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/courses/%d/feedback-activities", courseID)
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// CreateFeedbackActivityTyped creates a feedback activity and decodes the created activity.
+func (s *Service) CreateFeedbackActivityTyped(ctx context.Context, courseID int, body interface{}) (*FeedbackActivity, error) {
+	u := fmt.Sprintf("/api/courses/%d/feedback-activities", courseID)
+	result := new(FeedbackActivity)
+	_, err := s.client.Post(ctx, u, body, result)
 	return result, err
 }
 
@@ -43,11 +59,27 @@ func (s *Service) UpdateFeedbackActivity(ctx context.Context, activityID int, bo
 	return result, err
 }
 
+// UpdateFeedbackActivityTyped updates a feedback activity and decodes the activity payload.
+func (s *Service) UpdateFeedbackActivityTyped(ctx context.Context, activityID int, body interface{}) (*FeedbackActivity, error) {
+	u := fmt.Sprintf("/api/feedback-activities/%d", activityID)
+	result := new(FeedbackActivity)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
+}
+
 // GetFeedback returns a feedback.
 func (s *Service) GetFeedback(ctx context.Context, feedbackID int) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/feedbacks/%d", feedbackID)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetFeedbackTyped returns a feedback record.
+func (s *Service) GetFeedbackTyped(ctx context.Context, feedbackID int) (*Feedback, error) {
+	u := fmt.Sprintf("/api/feedbacks/%d", feedbackID)
+	result := new(Feedback)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -59,11 +91,27 @@ func (s *Service) CreateFeedback(ctx context.Context, activityID int, body inter
 	return result, err
 }
 
+// CreateFeedbackTyped creates feedback under a feedback activity.
+func (s *Service) CreateFeedbackTyped(ctx context.Context, activityID int, body interface{}) (*Feedback, error) {
+	u := fmt.Sprintf("/api/feedback-activities/%d/feedbacks", activityID)
+	result := new(Feedback)
+	_, err := s.client.Post(ctx, u, body, result)
+	return result, err
+}
+
 // UpdateFeedback updates feedback under a feedback activity.
 func (s *Service) UpdateFeedback(ctx context.Context, activityID, feedbackID int, body interface{}) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/feedback-activities/%d/feedbacks/%d", activityID, feedbackID)
 	var result json.RawMessage
 	_, err := s.client.Put(ctx, u, body, &result)
+	return result, err
+}
+
+// UpdateFeedbackTyped updates feedback under a feedback activity.
+func (s *Service) UpdateFeedbackTyped(ctx context.Context, activityID, feedbackID int, body interface{}) (*Feedback, error) {
+	u := fmt.Sprintf("/api/feedback-activities/%d/feedbacks/%d", activityID, feedbackID)
+	result := new(Feedback)
+	_, err := s.client.Put(ctx, u, body, result)
 	return result, err
 }
 

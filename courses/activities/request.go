@@ -30,6 +30,11 @@ type ActivityCriteriaQuery struct {
 	CourseID     int
 }
 
+type ActivityCompletionCriteriaDetailQuery struct {
+	ActivityType string
+	CourseID     int
+}
+
 type ActivityPrerequisiteQuery struct {
 	ActivityType string
 }

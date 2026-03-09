@@ -135,7 +135,32 @@ func TestHomepageResourceHelpersUseFrontendEndpoints(t *testing.T) {
 			if got := r.URL.Query().Get("page_size"); got != "6" {
 				t.Fatalf("unexpected search page_size: %q", got)
 			}
+			if got := r.URL.Query().Get("fields"); got != sharedResourceSearchFields {
+				t.Fatalf("unexpected search fields: %q", got)
+			}
 			_, _ = w.Write([]byte(`{"resources":[{"id":9,"name":"搜索资源"}],"page":2,"page_size":6,"pages":3,"total":15}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/anonymous-api/shared-resources/from-me":
+			if got := r.URL.Query().Get("page"); got != "1" {
+				t.Fatalf("unexpected from-me page: %q", got)
+			}
+			if got := r.URL.Query().Get("page_size"); got != "4" {
+				t.Fatalf("unexpected from-me page_size: %q", got)
+			}
+			if got := r.URL.Query().Get("conditions"); got != `{"keyword":"mine"}` {
+				t.Fatalf("unexpected from-me conditions: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"resources":[{"id":12,"name":"我的资源"}],"page":1,"page_size":4,"pages":1,"total":1}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/shared-resources-to-me":
+			if got := r.URL.Query().Get("page"); got != "3" {
+				t.Fatalf("unexpected share-to-me page: %q", got)
+			}
+			if got := r.URL.Query().Get("page_size"); got != "7" {
+				t.Fatalf("unexpected share-to-me page_size: %q", got)
+			}
+			if got := r.URL.Query().Get("conditions"); got != `{"keyword":"share"}` {
+				t.Fatalf("unexpected share-to-me conditions: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"resources":[{"id":13,"name":"共享给我"}],"page":3,"page_size":7,"pages":4,"total":22}`))
 		case r.Method == http.MethodGet && r.URL.Path == "/anonymous-api/shared-resources/most-liked":
 			if got := r.URL.Query().Get("conditions"); got != `{"keyword":"AI"}` {
 				t.Fatalf("unexpected most-liked conditions: %q", got)
@@ -188,6 +213,16 @@ func TestHomepageResourceHelpersUseFrontendEndpoints(t *testing.T) {
 	searchResult, err := service.SearchSharedResourcesWithPrefix(ctx, true, ListSharedResourcesParams{Page: 2, PageSize: 6, Conditions: `{"keyword":"AI"}`})
 	if err != nil || len(searchResult.Resources) != 1 || searchResult.Resources[0].ID != 9 {
 		t.Fatalf("unexpected search result: %#v, err=%v", searchResult, err)
+	}
+
+	fromMe, err := service.ListSharedResourcesFromMeWithPrefix(ctx, true, ListSharedResourcesParams{Page: 1, PageSize: 4, Conditions: `{"keyword":"mine"}`})
+	if err != nil || len(fromMe.Resources) != 1 || fromMe.Resources[0].ID != 12 {
+		t.Fatalf("unexpected from-me result: %#v, err=%v", fromMe, err)
+	}
+
+	sharedToMe, err := service.ListSharedResourcesToMeWithParams(ctx, ListSharedResourcesParams{Page: 3, PageSize: 7, Conditions: `{"keyword":"share"}`})
+	if err != nil || len(sharedToMe.Resources) != 1 || sharedToMe.Resources[0].ID != 13 {
+		t.Fatalf("unexpected share-to-me result: %#v, err=%v", sharedToMe, err)
 	}
 
 	mostLiked, err := service.ListMostLikedSharedResourcesWithPrefix(ctx, true, `{"keyword":"AI"}`)

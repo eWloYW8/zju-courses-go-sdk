@@ -1,6 +1,9 @@
 package homework
 
-import "github.com/eWloYW8/zju-courses-go-sdk/courses/activities"
+import (
+	"github.com/eWloYW8/zju-courses-go-sdk/courses/activities"
+	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+)
 
 type SubmissionListResponse struct {
 	List []*Submission `json:"list"`
@@ -43,3 +46,12 @@ type RedoMapResponse struct {
 type DuplicateDetectRatesResponse struct {
 	Items []DuplicateDetectRateItem `json:"items,omitempty"`
 }
+
+type DuplicateLibUploadsResponse struct {
+	Uploads []*model.Upload `json:"uploads,omitempty"`
+	model.Pagination
+}
+
+type SubmissionAnalysisStatusResponse map[string]any
+
+type SubmissionAnalysisResponse map[string]any

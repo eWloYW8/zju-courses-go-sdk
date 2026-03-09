@@ -43,8 +43,36 @@ type ListSubmissionRecordsParams struct {
 	UserIDs         []int `json:"-"`
 }
 
+type ListDuplicateLibUploadsParams struct {
+	Page       int
+	PageSize   int
+	Conditions any
+}
+
+type AddDuplicateLibUploadsRequest struct {
+	UploadIDs []int `json:"upload_ids,omitempty"`
+}
+
+type DuplicateDetectReportDownloadRequest struct {
+	ReportType string `json:"report_type,omitempty"`
+	DetectKey  string `json:"detect_key,omitempty"`
+	Provider   string `json:"provider,omitempty"`
+}
+
 type MarkHomeworkSubmissionToRedoRequest struct {
 	SubmissionID int `json:"submission_id,omitempty"`
 	StudentID    int `json:"student_id,omitempty"`
 	GroupID      int `json:"group_id,omitempty"`
+}
+
+type HomeworkAIGenerateRequest struct {
+	LearningGoals         string   `json:"learning_goals,omitempty"`
+	BloomCognitiveDomains []string `json:"bloom_cognitive_domains,omitempty"`
+	Locale                string   `json:"locale,omitempty"`
+	Assignment            string   `json:"assignment,omitempty"`
+	Suggestion            string   `json:"suggestion,omitempty"`
+}
+
+type SubmissionAnalysisRequest struct {
+	Content string `json:"content,omitempty"`
 }

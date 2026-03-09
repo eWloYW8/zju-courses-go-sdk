@@ -260,6 +260,23 @@ func (s *Service) ListEntries(ctx context.Context) (json.RawMessage, error) {
 	return result, err
 }
 
+// ListEntriesWithParams returns the frontend paged entry list with typed items.
+func (s *Service) ListEntriesWithParams(ctx context.Context, params ListEntriesParams) (*EntriesResponse, error) {
+	u := addListOptions("/api/entries", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	fields := params.Fields
+	if fields == "" {
+		fields = "id,org_id,name,created_at,updated_at,created_by_id,updated_by_id,reference_count"
+	}
+	query := map[string]string{"fields": fields}
+	if encoded := encodeConditions(params.Conditions); encoded != "" {
+		query["conditions"] = encoded
+	}
+	u = addQueryParams(u, query)
+	result := new(EntriesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // CreateEntry creates an entry.
 func (s *Service) CreateEntry(ctx context.Context, body interface{}) (json.RawMessage, error) {
 	var result json.RawMessage
@@ -275,9 +292,46 @@ func (s *Service) GetEntry(ctx context.Context, entryID int) (json.RawMessage, e
 	return result, err
 }
 
+// GetEntryTyped returns the frontend entry detail payload with default fields.
+func (s *Service) GetEntryTyped(ctx context.Context, entryID int) (*Entry, error) {
+	u := fmt.Sprintf("/api/entries/%d", entryID)
+	u = addQueryParams(u, map[string]string{
+		"fields": "id,org_id,name,definition,uploads,keywords,created_at,updated_at,created_by_id,updated_by_id,reference_count",
+	})
+	result := new(Entry)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListEntryReferences returns paged entry references.
+func (s *Service) ListEntryReferences(ctx context.Context, entryID int, params ListEntryReferencesParams) (*EntryReferencesResponse, error) {
+	u := addListOptions(fmt.Sprintf("/api/entries/%d/references", entryID), &model.ListOptions{
+		Page:     params.Page,
+		PageSize: params.PageSize,
+	})
+	result := new(EntryReferencesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateEntry updates an entry and decodes the updated payload.
+func (s *Service) UpdateEntry(ctx context.Context, entryID int, body interface{}) (*Entry, error) {
+	u := fmt.Sprintf("/api/entries/%d", entryID)
+	result := new(Entry)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
+}
+
+// DeleteEntry deletes an entry.
+func (s *Service) DeleteEntry(ctx context.Context, entryID int) error {
+	u := fmt.Sprintf("/api/entries/%d", entryID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
 // BatchDeleteEntries batch deletes entries.
 func (s *Service) BatchDeleteEntries(ctx context.Context, body interface{}) error {
-	_, err := s.client.Post(ctx, "/api/entries/batch-delete", body, nil)
+	_, err := s.client.DeleteWithBody(ctx, "/api/entries/batch-delete", body, nil)
 	return err
 }
 
@@ -406,6 +460,14 @@ func (s *Service) GetLessonManagement(ctx context.Context, lessonID int) (json.R
 	return result, err
 }
 
+// GetOrgDownloadCapture returns whether lesson capture download is enabled for an org.
+func (s *Service) GetOrgDownloadCapture(ctx context.Context, orgID int) (*FeatureEnabledResponse, error) {
+	u := fmt.Sprintf("/api/orgs/%d/download-capture", orgID)
+	result := new(FeatureEnabledResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // ListLessonRooms returns lesson rooms.
 func (s *Service) ListLessonRooms(ctx context.Context) ([]*LessonRoom, error) {
 	var result []*LessonRoom
@@ -413,11 +475,17 @@ func (s *Service) ListLessonRooms(ctx context.Context) ([]*LessonRoom, error) {
 	return result, err
 }
 
-// ListRoomLocations returns room locations for a course.
+// ListRoomLocations returns the frontend global room-location list.
 func (s *Service) ListRoomLocations(ctx context.Context, courseID int) (*RoomLocationsResponse, error) {
-	u := fmt.Sprintf("/api/course/%d/room-locations", courseID)
 	result := new(RoomLocationsResponse)
-	_, err := s.client.Get(ctx, u, result)
+	_, err := s.client.Get(ctx, "/api/room-locations", result)
+	return result, err
+}
+
+// ListGlobalRoomLocations returns the frontend lesson room-location list.
+func (s *Service) ListGlobalRoomLocations(ctx context.Context) (*RoomLocationsResponse, error) {
+	result := new(RoomLocationsResponse)
+	_, err := s.client.Get(ctx, "/api/room-locations", result)
 	return result, err
 }
 

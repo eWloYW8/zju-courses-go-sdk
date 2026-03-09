@@ -39,6 +39,23 @@ func (s *Service) GetExamMakeUpRecord(ctx context.Context, examID int) (json.Raw
 	return result, err
 }
 
+// ListExamRetakeRecords returns the paged retake-record payload used by the grading UI.
+func (s *Service) ListExamRetakeRecords(ctx context.Context, examID int, params *ListExamRetakeRecordsParams) (*ExamRetakeRecordsResponse, error) {
+	query := map[string]string{"include_make_up": "true"}
+	if params != nil {
+		if params.Page > 0 {
+			query["page"] = fmt.Sprintf("%d", params.Page)
+		}
+		if params.PageSize > 0 {
+			query["page_size"] = fmt.Sprintf("%d", params.PageSize)
+		}
+	}
+	u := addQueryParams(fmt.Sprintf("/api/exams/%d/retake-record", examID), query)
+	result := new(ExamRetakeRecordsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // CheckExamQualification checks whether the current user can access an exam.
 func (s *Service) CheckExamQualification(ctx context.Context, examID int, checkStatus string) (json.RawMessage, error) {
 	params := map[string]string{}
@@ -53,7 +70,7 @@ func (s *Service) CheckExamQualification(ctx context.Context, examID int, checkS
 
 // CreateExam creates a new exam.
 func (s *Service) CreateExam(ctx context.Context, courseID int, exam interface{}) (*Exam, error) {
-	u := fmt.Sprintf("/api/exams/%d", courseID)
+	u := fmt.Sprintf("/api/courses/%d/exams", courseID)
 	result := new(Exam)
 	_, err := s.client.Post(ctx, u, exam, result)
 	return result, err
@@ -123,6 +140,37 @@ func (s *Service) UpdateExamSubjectExplanation(ctx context.Context, examID int, 
 	return result, err
 }
 
+// ListExamSubjectiveQuestions returns the subjective-questions payload for grading views.
+func (s *Service) ListExamSubjectiveQuestions(ctx context.Context, examID int) (*SubjectsResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/subjective-questions", examID)
+	result := new(SubjectsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateExamSubmissionComment updates the grading comment for a submission.
+func (s *Service) UpdateExamSubmissionComment(ctx context.Context, examID, submissionID int, body *UpdateExamSubmissionCommentRequest) error {
+	u := fmt.Sprintf("/api/exams/%d/submissions/%d/comment", examID, submissionID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// GiveExamScore submits a score for a single examinee/group.
+func (s *Service) GiveExamScore(ctx context.Context, examID int, body interface{}) (ExamScoreOperationResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/give-score", examID)
+	result := make(ExamScoreOperationResponse)
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// GiveExamScores submits scores in batch.
+func (s *Service) GiveExamScores(ctx context.Context, examID int, body interface{}) (ExamScoreOperationResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/give-scores", examID)
+	result := make(ExamScoreOperationResponse)
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
 // GetExamScoreDistribution returns the score-distribution payload used by exam grading views.
 func (s *Service) GetExamScoreDistribution(ctx context.Context, examID int, conditions ExamScoreDistributionConditions) (ExamScoreDistributionResponse, error) {
 	u := fmt.Sprintf("/api/exams/%d/score-distribution", examID)
@@ -135,6 +183,21 @@ func (s *Service) GetExamScoreDistribution(ctx context.Context, examID int, cond
 	}
 	result := make(ExamScoreDistributionResponse)
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// StartExamPaperZip creates or restarts the exam paper zip task.
+func (s *Service) StartExamPaperZip(ctx context.Context, examID int) error {
+	u := fmt.Sprintf("/api/exams/%d/zip-papers", examID)
+	_, err := s.client.Post(ctx, u, map[string]any{}, nil)
+	return err
+}
+
+// GetExamPaperZipStatus returns the frontend zip task status wrapper.
+func (s *Service) GetExamPaperZipStatus(ctx context.Context, examID int) (*ExamPaperZipStatusResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/zip-status?no-intercept=true", examID)
+	result := new(ExamPaperZipStatusResponse)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -164,6 +227,31 @@ func (s *Service) UpdateClassroom(ctx context.Context, classroomID int, classroo
 	return result, err
 }
 
+// DeleteClassroom deletes a classroom quiz.
+func (s *Service) DeleteClassroom(ctx context.Context, classroomID int) error {
+	u := fmt.Sprintf("/api/classrooms/%d", classroomID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// UpdateClassroomStatus updates a classroom session status.
+func (s *Service) UpdateClassroomStatus(ctx context.Context, classroomID, status int) (*Classroom, error) {
+	u := fmt.Sprintf("/api/classrooms/%d/status", classroomID)
+	result := new(Classroom)
+	_, err := s.client.Put(ctx, u, &ClassroomStatusRequest{Status: status}, result)
+	return result, err
+}
+
+// StartClassroom starts a classroom session.
+func (s *Service) StartClassroom(ctx context.Context, classroomID int) (*Classroom, error) {
+	return s.UpdateClassroomStatus(ctx, classroomID, 1)
+}
+
+// FinishClassroom finishes a classroom session.
+func (s *Service) FinishClassroom(ctx context.Context, classroomID int) (*Classroom, error) {
+	return s.UpdateClassroomStatus(ctx, classroomID, 2)
+}
+
 // SubmitClassroomExam submits a classroom exam.
 func (s *Service) SubmitClassroomExam(ctx context.Context, classroomID int, body interface{}) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/classroom-exams/%d", classroomID)
@@ -180,11 +268,86 @@ func (s *Service) GetClassroomExam(ctx context.Context, classroomID int) (json.R
 	return result, err
 }
 
+// GetClassroomExamTyped returns the classroom exam config/detail by activity id.
+func (s *Service) GetClassroomExamTyped(ctx context.Context, classroomID int) (*Classroom, error) {
+	u := fmt.Sprintf("/api/classroom-exams/%d", classroomID)
+	result := new(Classroom)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // SaveClassroomSubjects saves classroom exam subjects.
 func (s *Service) SaveClassroomSubjects(ctx context.Context, classroomID int, body interface{}) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/classroom-exams/%d/subjects", classroomID)
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// SaveClassroomSubjectsTyped saves classroom exam subjects and decodes the subject list.
+func (s *Service) SaveClassroomSubjectsTyped(ctx context.Context, classroomID int, body *SaveSubjectsRequest) (*SubjectsResponse, error) {
+	u := fmt.Sprintf("/api/classroom-exams/%d/subjects", classroomID)
+	result := new(SubjectsResponse)
+	_, err := s.client.Post(ctx, u, body, result)
+	return result, err
+}
+
+// UpdateClassroomSubjectStatus updates the live status of a classroom subject.
+func (s *Service) UpdateClassroomSubjectStatus(ctx context.Context, classroomID, subjectID, status int) (*ExamSubject, error) {
+	u := fmt.Sprintf("/api/classrooms/%d/subjects/%d/status", classroomID, subjectID)
+	result := new(ExamSubject)
+	_, err := s.client.Put(ctx, u, &UpdateClassroomSubjectStatusRequest{Status: status}, result)
+	return result, err
+}
+
+// ListClassroomMySubmissions returns the current user's classroom submissions.
+func (s *Service) ListClassroomMySubmissions(ctx context.Context, classroomID int) (*ClassroomMySubmissionsResponse, error) {
+	u := fmt.Sprintf("/api/classroom-exams/%d/my-submissions", classroomID)
+	result := new(ClassroomMySubmissionsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetClassroomSubmission returns a single classroom submission detail.
+func (s *Service) GetClassroomSubmission(ctx context.Context, classroomID, submissionID int) (*ClassroomSubmission, error) {
+	u := fmt.Sprintf("/api/classroom-exams/%d/submissions/%d", classroomID, submissionID)
+	result := new(ClassroomSubmission)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListClassroomScoreList returns classroom examinee scores.
+func (s *Service) ListClassroomScoreList(ctx context.Context, classroomID int, params *ClassroomScoreListParams) (*ClassroomScoreListResponse, error) {
+	query := map[string]string{}
+	if params != nil {
+		query["ignore_avatar"] = fmt.Sprintf("%t", params.IgnoreAvatar)
+		if len(params.ExamineeIDs) > 0 {
+			body, err := json.Marshal(map[string][]int{"examinee_ids": params.ExamineeIDs})
+			if err != nil {
+				return nil, err
+			}
+			query["conditions"] = string(body)
+		}
+	}
+	u := addQueryParams(fmt.Sprintf("/api/classroom-exams/%d/score-list", classroomID), query)
+	result := new(ClassroomScoreListResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListClassroomExaminees returns classroom examinees.
+func (s *Service) ListClassroomExaminees(ctx context.Context, classroomID int) (*ClassroomExamineesResponse, error) {
+	u := fmt.Sprintf("/api/classroom-exams/%d/examinees", classroomID)
+	result := new(ClassroomExamineesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetClassroomSubmissionCountStatus returns submission-count statistics for a classroom.
+func (s *Service) GetClassroomSubmissionCountStatus(ctx context.Context, classroomID int) (*ClassroomSubmissionCountStatus, error) {
+	u := fmt.Sprintf("/api/classroom-exams/%d/submission-count-status", classroomID)
+	result := new(ClassroomSubmissionCountStatus)
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -259,6 +422,14 @@ func (s *Service) ListCoursewareQuizzes(ctx context.Context, activityID int) ([]
 	return result, err
 }
 
+// CreateCoursewareQuiz creates a new courseware quiz for an activity.
+func (s *Service) CreateCoursewareQuiz(ctx context.Context, activityID int, body *CreateCoursewareQuizRequest) (*CoursewareQuizCreateResponse, error) {
+	u := fmt.Sprintf("/api/courseware-quiz/activity/%d/quizzes", activityID)
+	result := new(CoursewareQuizCreateResponse)
+	_, err := s.client.Post(ctx, u, body, result)
+	return result, err
+}
+
 // GetCoursewareQuiz returns a specific courseware quiz.
 func (s *Service) GetCoursewareQuiz(ctx context.Context, quizID int) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/courseware-quiz/quiz/%d", quizID)
@@ -272,6 +443,59 @@ func (s *Service) GetCoursewareQuizSubjects(ctx context.Context, quizID int) (*C
 	u := fmt.Sprintf("/api/courseware-quiz/quiz/%d/subjects", quizID)
 	result := new(CoursewareQuizSubjectsResponse)
 	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetCoursewareQuizSubmission returns the current user's submission meta for a courseware quiz.
+func (s *Service) GetCoursewareQuizSubmission(ctx context.Context, quizID int) (*CoursewareQuizSubmission, error) {
+	u := fmt.Sprintf("/api/courseware-quiz/quiz/%d/my-submission", quizID)
+	result := new(CoursewareQuizSubmission)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// SubmitCoursewareQuiz submits answers for a courseware quiz.
+func (s *Service) SubmitCoursewareQuiz(ctx context.Context, quizID int, body interface{}) error {
+	u := fmt.Sprintf("/api/courseware-quiz/quiz/%d/submissions", quizID)
+	_, err := s.client.Post(ctx, u, body, nil)
+	return err
+}
+
+// GetCoursewareQuizStatistic returns aggregate statistics for a courseware quiz.
+func (s *Service) GetCoursewareQuizStatistic(ctx context.Context, quizID int) (*AiQuizStatistic, error) {
+	u := fmt.Sprintf("/api/courseware-quiz/quiz/%d/statistic", quizID)
+	result := new(AiQuizStatistic)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetCoursewareQuizSubjectStatistic returns paged answer statistics for a single subject.
+func (s *Service) GetCoursewareQuizSubjectStatistic(ctx context.Context, courseID, quizID, subjectID int, params CoursewareQuizSubjectStatisticParams) (*CoursewareQuizSubjectStatisticResponse, error) {
+	query := map[string]string{}
+	if params.Page > 0 {
+		query["page"] = fmt.Sprintf("%d", params.Page)
+	}
+	if params.PageSize > 0 {
+		query["page_size"] = fmt.Sprintf("%d", params.PageSize)
+	}
+	if params.Conditions != nil {
+		body, err := json.Marshal(params.Conditions)
+		if err != nil {
+			return nil, err
+		}
+		query["conditions"] = string(body)
+	}
+	u := addQueryParams(fmt.Sprintf("/api/course/%d/courseware-quiz/quiz/%d/subject/%d/statistic", courseID, quizID, subjectID), query)
+	result := new(CoursewareQuizSubjectStatisticResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// AnalyzeCoursewareQuiz triggers or refreshes quiz analysis.
+func (s *Service) AnalyzeCoursewareQuiz(ctx context.Context, quizID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/courseware-quiz/quiz/%d/analyze", quizID)
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, nil, &result)
 	return result, err
 }
 
@@ -398,6 +622,17 @@ func (s *Service) GetSubject(ctx context.Context, subjectID int) (*ExamSubject, 
 	return result, err
 }
 
+// GetSubjectForExam returns a subject using the frontend exam-aware query parameters.
+func (s *Service) GetSubjectForExam(ctx context.Context, subjectID, examID int) (*ExamSubject, error) {
+	u := addQueryParams(fmt.Sprintf("/api/subjects/%d", subjectID), map[string]string{
+		"can_select_sub_subject": "true",
+		"exam_id":                fmt.Sprintf("%d", examID),
+	})
+	result := new(ExamSubject)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // GetSHTVUModules returns chapter/module data from the SHTVU study platform bridge.
 func (s *Service) GetSHTVUModules(ctx context.Context, courseID int) (*SHTVUModulesResponse, error) {
 	u := fmt.Sprintf("/api/courses/%d/query-shtvu-modules", courseID)
@@ -467,10 +702,73 @@ func (s *Service) ImportVideoQuizSubjectsFromSHTVU(ctx context.Context, videoQui
 	return result, err
 }
 
+// SearchExamSubjects returns exam subjects filtered by keyword, subject type, and make-up flag.
+func (s *Service) SearchExamSubjects(ctx context.Context, examID int, params *SearchExamSubjectsParams) ([]*ExamSubject, error) {
+	query := map[string]string{}
+	if params != nil {
+		query["is_makeup_exam"] = fmt.Sprintf("%t", params.IsMakeupExam)
+		if params.Keyword != "" {
+			query["keyword"] = params.Keyword
+		}
+		if params.SubjectType != "" && params.SubjectType != "all" {
+			query["subject_type"] = params.SubjectType
+		}
+	} else {
+		query["is_makeup_exam"] = "false"
+	}
+	u := addQueryParams(fmt.Sprintf("/api/exams/%d/subjects", examID), query)
+	result := new(SubjectsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	if err != nil {
+		return nil, err
+	}
+	return result.Subjects, nil
+}
+
+// ListExamSubjectExaminees returns per-subject examinees for grading.
+func (s *Service) ListExamSubjectExaminees(ctx context.Context, examID, subjectID int, isMakeupExam bool) (ExamSubjectExamineesResponse, error) {
+	u := addQueryParams(fmt.Sprintf("/api/exams/%d/subjects/%d/examinees", examID, subjectID), map[string]string{
+		"is_makeup_exam": fmt.Sprintf("%t", isMakeupExam),
+	})
+	result := make(ExamSubjectExamineesResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListExamSubjectGroups returns per-subject groups for grading.
+func (s *Service) ListExamSubjectGroups(ctx context.Context, examID, subjectID int, isMakeupExam bool) (ExamSubjectGroupsResponse, error) {
+	u := addQueryParams(fmt.Sprintf("/api/exams/%d/subjects/%d/groups", examID, subjectID), map[string]string{
+		"is_makeup_exam": fmt.Sprintf("%t", isMakeupExam),
+	})
+	result := make(ExamSubjectGroupsResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListExamSubjectExamineeSubmissions returns submissions for one examinee under a subject.
+func (s *Service) ListExamSubjectExamineeSubmissions(ctx context.Context, examID, subjectID, examineeID int, isMakeupExam bool) (ExamSubjectSubmissionsResponse, error) {
+	u := addQueryParams(fmt.Sprintf("/api/exams/%d/subjects/%d/examinees/%d/submissions", examID, subjectID, examineeID), map[string]string{
+		"is_makeup_exam": fmt.Sprintf("%t", isMakeupExam),
+	})
+	result := make(ExamSubjectSubmissionsResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListExamSubjectGroupSubmissions returns submissions for one group under a subject.
+func (s *Service) ListExamSubjectGroupSubmissions(ctx context.Context, examID, subjectID, groupID int, isMakeupExam bool) (ExamSubjectSubmissionsResponse, error) {
+	u := addQueryParams(fmt.Sprintf("/api/exams/%d/subjects/%d/groups/%d/submissions", examID, subjectID, groupID), map[string]string{
+		"is_makeup_exam": fmt.Sprintf("%t", isMakeupExam),
+	})
+	result := make(ExamSubjectSubmissionsResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // SearchSubjectsInLib returns subjects in a subject library filtered by keyword/type.
 func (s *Service) SearchSubjectsInLib(ctx context.Context, libID int, keyword, subjectType string) ([]*ExamSubject, error) {
 	u := fmt.Sprintf("/api/subject-libs/%d?keyword=%s", libID, url.QueryEscape(keyword))
-	if subjectType != "" {
+	if subjectType != "" && subjectType != "all" {
 		u += "&subject_type=" + url.QueryEscape(subjectType)
 	}
 	var result struct {
@@ -550,6 +848,38 @@ func (s *Service) BatchCopySubjectLibsToCoursewareQuiz(ctx context.Context, cour
 	u := fmt.Sprintf("/api/subject-libs/batch/copy?courseware_quiz_id=%d", coursewareQuizID)
 	_, err := s.client.Post(ctx, u, body, nil)
 	return err
+}
+
+// UpdateExamPointsAndRules updates exam point rules from the point-rule popup.
+func (s *Service) UpdateExamPointsAndRules(ctx context.Context, examID int, body *UpdateExamPointsAndRulesRequest) (*ExamPointsAndRulesResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/points-and-rules", examID)
+	result := new(ExamPointsAndRulesResponse)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
+}
+
+// UpdateClassroomPoints updates classroom point rules from the point-rule popup.
+func (s *Service) UpdateClassroomPoints(ctx context.Context, classroomID int, body *UpdateExamPointsAndRulesRequest) (*ExamPointsAndRulesResponse, error) {
+	u := fmt.Sprintf("/api/classroom-exams/%d/points", classroomID)
+	result := new(ExamPointsAndRulesResponse)
+	_, err := s.client.Put(ctx, u, body, result)
+	return result, err
+}
+
+// ImportExamSubjectsFromCampus imports campus question-bank subjects into an exam.
+func (s *Service) ImportExamSubjectsFromCampus(ctx context.Context, examID int, body *ImportSubjectsFromCampusRequest) (*SubjectsResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/imported-subjects-from-campus", examID)
+	result := new(SubjectsResponse)
+	_, err := s.client.Post(ctx, u, body, result)
+	return result, err
+}
+
+// ImportClassroomSubjectsFromCampus imports campus question-bank subjects into a classroom.
+func (s *Service) ImportClassroomSubjectsFromCampus(ctx context.Context, classroomID int, body *ImportSubjectsFromCampusRequest) (*SubjectsResponse, error) {
+	u := fmt.Sprintf("/api/classrooms/%d/imported-subjects-from-campus", classroomID)
+	result := new(SubjectsResponse)
+	_, err := s.client.Post(ctx, u, body, result)
+	return result, err
 }
 
 // --- Rubrics ---
@@ -689,11 +1019,155 @@ func (s *Service) MakeupExam(ctx context.Context, body MakeupExamRequest) error 
 	return err
 }
 
+// ListCourseExamList returns the frontend course exam list payload.
+func (s *Service) ListCourseExamList(ctx context.Context, courseID int, params *ListCourseExamListParams) (CourseExamListResponse, error) {
+	query := map[string]string{}
+	if params != nil {
+		if params.Page > 0 {
+			query["page"] = fmt.Sprintf("%d", params.Page)
+		}
+		if params.PageSize > 0 {
+			query["page_size"] = fmt.Sprintf("%d", params.PageSize)
+		}
+		if params.Conditions != nil {
+			body, err := json.Marshal(params.Conditions)
+			if err != nil {
+				return nil, err
+			}
+			query["conditions"] = string(body)
+		}
+	}
+	u := addQueryParams(fmt.Sprintf("/api/courses/%d/exam-list", courseID), query)
+	result := make(CourseExamListResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // ListCourseExams returns all exams for a course.
 func (s *Service) ListCourseExams(ctx context.Context, courseID int) (*CourseExamsResponse, error) {
 	u := fmt.Sprintf("/api/courses/%d/exams", courseID)
 	result := new(CourseExamsResponse)
 	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetExamSubjectsStat returns the frontend per-paper-type subject statistics.
+func (s *Service) GetExamSubjectsStat(ctx context.Context, examID int, params *ExamSubjectsStatParams) (ExamSubjectsStatResponse, error) {
+	query := map[string]string{}
+	if params != nil {
+		if params.ExamPaperType != "" {
+			query["exam_paper_type"] = params.ExamPaperType
+		}
+		if params.Conditions != nil {
+			body, err := json.Marshal(params.Conditions)
+			if err != nil {
+				return nil, err
+			}
+			query["conditions"] = string(body)
+		}
+	}
+	u := addQueryParams(fmt.Sprintf("/api/exams/%d/subjects-stat", examID), query)
+	result := make(ExamSubjectsStatResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListExamSubmissions returns the exam submissions payload.
+func (s *Service) ListExamSubmissions(ctx context.Context, examID int) (ExamSubmissionsResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/submissions", examID)
+	result := make(ExamSubmissionsResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// ListExamScoreList returns the frontend exam score-list payload.
+func (s *Service) ListExamScoreList(ctx context.Context, examID int, params *ExamScoreListParams) (ExamScoreListResponse, error) {
+	query := map[string]string{}
+	if params != nil && params.Conditions != nil {
+		body, err := json.Marshal(params.Conditions)
+		if err != nil {
+			return nil, err
+		}
+		query["conditions"] = string(body)
+	}
+	u := addQueryParams(fmt.Sprintf("/api/exams/%d/score-list", examID), query)
+	result := make(ExamScoreListResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetExamExaminee returns frontend examinee detail for an exam.
+func (s *Service) GetExamExaminee(ctx context.Context, examID, examineeID int) (ExamExamineeResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/examinees/%d", examID, examineeID)
+	result := make(ExamExamineeResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetExamSubjectsSummary returns subject summary payload for an exam.
+func (s *Service) GetExamSubjectsSummary(ctx context.Context, examID int, forAllSubjects *bool) (ExamSubjectsSummaryResponse, error) {
+	query := map[string]string{}
+	if forAllSubjects != nil {
+		query["forAllSubjects"] = fmt.Sprintf("%t", *forAllSubjects)
+	}
+	u := addQueryParams(fmt.Sprintf("/api/exams/%d/subjects-summary", examID), query)
+	result := make(ExamSubjectsSummaryResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetExamExaminees returns the grouped examinee submission-status payload.
+func (s *Service) GetExamExaminees(ctx context.Context, examID int, params *ExamExamineesParams) (ExamExamineesResponse, error) {
+	query := map[string]string{}
+	if params != nil && params.Conditions != nil {
+		body, err := json.Marshal(params.Conditions)
+		if err != nil {
+			return nil, err
+		}
+		query["conditions"] = string(body)
+	}
+	u := addQueryParams(fmt.Sprintf("/api/exam/%d/examinees", examID), query)
+	result := make(ExamExamineesResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetExamGroups returns the grouped submission payload for an exam.
+func (s *Service) GetExamGroups(ctx context.Context, examID int) (ExamGroupsResponse, error) {
+	u := fmt.Sprintf("/api/exam/%d/groups", examID)
+	result := make(ExamGroupsResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetExamSubmissionCountStatus returns submission-count statistics for an exam.
+func (s *Service) GetExamSubmissionCountStatus(ctx context.Context, examID int) (ExamSubmissionCountStatusResponse, error) {
+	u := fmt.Sprintf("/api/exam/%d/submission-count-status", examID)
+	result := make(ExamSubmissionCountStatusResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// SyncExamSubjectsToPlatform starts subject sync to the third-party platform.
+func (s *Service) SyncExamSubjectsToPlatform(ctx context.Context, examID int) error {
+	u := fmt.Sprintf("/api/exams/%d/subjects/sync-to-platform", examID)
+	_, err := s.client.Post(ctx, u, nil, nil)
+	return err
+}
+
+// SyncExamSubmissionsFromPlatform pulls submission data from the third-party platform.
+func (s *Service) SyncExamSubmissionsFromPlatform(ctx context.Context, examID int) (ExamSubmissionSyncResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/submission/sync-from-platform", examID)
+	result := make(ExamSubmissionSyncResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetExamSubmissionSyncTaskProgress returns the frontend sync-task-progress payload.
+func (s *Service) GetExamSubmissionSyncTaskProgress(ctx context.Context, examID int) (ExamSubmissionSyncTaskProgressResponse, error) {
+	u := fmt.Sprintf("/api/exams/%d/submission/sync-task-progress", examID)
+	result := make(ExamSubmissionSyncTaskProgressResponse)
+	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
@@ -707,7 +1181,7 @@ func (s *Service) ListCourseClassrooms(ctx context.Context, courseID int) (*Cour
 
 // ListSubmittedExams returns IDs of submitted exams for a course.
 func (s *Service) ListSubmittedExams(ctx context.Context, courseID int) (*SubmittedExamsResponse, error) {
-	u := fmt.Sprintf("/api/courses/%d/submitted-exams", courseID)
+	u := fmt.Sprintf("/api/courses/%d/submitted-exams?no-intercept=true", courseID)
 	result := new(SubmittedExamsResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err

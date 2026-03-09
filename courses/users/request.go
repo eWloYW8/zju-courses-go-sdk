@@ -13,6 +13,8 @@ type SearchUserParams struct {
 	DepartmentID       *int
 }
 
+type SearchUsersQuery map[string]string
+
 type DepartmentUpdateRequest struct {
 	DepartmentID int `json:"department_id"`
 }
@@ -55,6 +57,12 @@ type PersonasRequest struct {
 type UserChatRequest struct {
 	SessionID string `json:"session_id,omitempty"`
 	Message   string `json:"message,omitempty"`
+}
+
+type NotebookGradingRequest struct {
+	NotebookID int   `json:"notebook_id,omitempty"`
+	SubjectIDs []int `json:"subject_ids,omitempty"`
+	Stream     bool  `json:"stream,omitempty"`
 }
 
 type RecalculateCourseCertificationScoresRequest struct {

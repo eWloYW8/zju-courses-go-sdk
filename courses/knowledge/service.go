@@ -623,6 +623,56 @@ func (s *Service) GetCourseExtensionApps(ctx context.Context, courseID int, anon
 	return result.Data, nil
 }
 
+// GetKnowledgeBase returns the course knowledge-base metadata.
+func (s *Service) GetKnowledgeBase(ctx context.Context, courseID int) (KnowledgeBase, error) {
+	u := fmt.Sprintf("/api/course/%d/knowledge-base", courseID)
+	result := make(KnowledgeBase)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// UploadKnowledgeBaseResource uploads a resource file into the course knowledge base.
+func (s *Service) UploadKnowledgeBaseResource(ctx context.Context, courseID, knowledgeBaseID int, reader io.Reader, filename string) (KnowledgeBaseMutationResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/knowledge-base/%d/resources/uploads", courseID, knowledgeBaseID)
+	result := make(KnowledgeBaseMutationResponse)
+	err := s.postMultipart(ctx, u, filename, reader, nil, &result)
+	return result, err
+}
+
+// ListKnowledgeBaseResources returns paged knowledge-base resources.
+func (s *Service) ListKnowledgeBaseResources(ctx context.Context, courseID, knowledgeBaseID int, params ListKnowledgeBaseResourcesParams) (*KnowledgeBaseResourcesResponse, error) {
+	u := addListOptions(fmt.Sprintf("/api/course/%d/knowledge-base/%d/resources", courseID, knowledgeBaseID), &model.ListOptions{
+		Page:     params.Page,
+		PageSize: params.PageSize,
+	})
+	if params.Conditions != nil {
+		body, err := json.Marshal(params.Conditions)
+		if err != nil {
+			return nil, err
+		}
+		u = addQueryParams(u, map[string]string{"conditions": string(body)})
+	}
+	result := new(KnowledgeBaseResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// RemoveKnowledgeBaseResource removes a resource from the course knowledge base.
+func (s *Service) RemoveKnowledgeBaseResource(ctx context.Context, courseID, knowledgeBaseID int, resourceID int) (KnowledgeBaseMutationResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/knowledge-base/%d/resources/remove", courseID, knowledgeBaseID)
+	result := make(KnowledgeBaseMutationResponse)
+	_, err := s.client.Post(ctx, u, &RemoveKnowledgeBaseResourceRequest{ResourceID: resourceID}, &result)
+	return result, err
+}
+
+// RetryKnowledgeBaseResource retries failed resource processing in the knowledge base.
+func (s *Service) RetryKnowledgeBaseResource(ctx context.Context, courseID, knowledgeBaseID int, resourceIDs []int) (KnowledgeBaseMutationResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/knowledge-base/%d/resources/retry", courseID, knowledgeBaseID)
+	result := make(KnowledgeBaseMutationResponse)
+	_, err := s.client.Post(ctx, u, &RetryKnowledgeBaseResourceRequest{ResourceIDs: resourceIDs}, &result)
+	return result, err
+}
+
 // ExportKnowledgeNodes exports knowledge nodes in the requested format and returns the blob bytes.
 func (s *Service) ExportKnowledgeNodes(ctx context.Context, courseID int, format string) ([]byte, error) {
 	u := fmt.Sprintf("/api/courses/%d/knowledge-nodes/export?format=%s", courseID, url.QueryEscape(format))

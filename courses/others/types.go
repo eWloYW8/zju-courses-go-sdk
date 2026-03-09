@@ -38,6 +38,24 @@ type ProjectSharedResource struct {
 	KnowledgeNodes []map[string]any `json:"knowledge_nodes,omitempty"`
 }
 
+type Entry struct {
+	ID             int             `json:"id"`
+	OrgID          int             `json:"org_id,omitempty"`
+	Name           string          `json:"name,omitempty"`
+	Definition     string          `json:"definition,omitempty"`
+	Uploads        []*model.Upload `json:"uploads,omitempty"`
+	Keywords       []*EntryKeyword `json:"keywords,omitempty"`
+	CreatedAt      string          `json:"created_at,omitempty"`
+	UpdatedAt      string          `json:"updated_at,omitempty"`
+	CreatedByID    int             `json:"created_by_id,omitempty"`
+	UpdatedByID    int             `json:"updated_by_id,omitempty"`
+	ReferenceCount int             `json:"reference_count,omitempty"`
+}
+
+type FeatureEnabledResponse struct {
+	Enabled bool `json:"enabled"`
+}
+
 type LessonRoom struct {
 	RoomCode string `json:"room_code,omitempty"`
 	RoomName string `json:"room_name,omitempty"`

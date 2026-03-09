@@ -50,6 +50,10 @@ type SectionsResponse struct {
 	Sections []*Section `json:"sections"`
 }
 
+type EntryRefersResponse struct {
+	EntryRefers []*EntryRefer `json:"entry_refers"`
+}
+
 type ScoreItemGroupsResponse struct {
 	Items []*ScoreItemGroup `json:"items"`
 }
@@ -73,9 +77,17 @@ type HomeworkSubmissionStatusResponse struct {
 	HomeworkActivities []*HomeworkSubmissionStatus `json:"homework_activities"`
 }
 
+type CatalogActivitiesResponse map[string]any
+
+type HomeworkSubmissionNumberResponse map[string]any
+
 type ExamScoresResponse struct {
 	ExamScores []*ExamScore `json:"exam_scores"`
 }
+
+type CourseExamSubmissionsResponse map[string]any
+
+type ClassroomExamScoresResponse map[string]any
 
 type UsersSmallAvatarsResponse struct {
 	Avatars map[string]string `json:"avatars"`
@@ -84,6 +96,12 @@ type UsersSmallAvatarsResponse struct {
 type LiveRecordsResponse struct {
 	LiveRecords []*LiveRecord `json:"live_records"`
 }
+
+type LiveRecordAsrTaskResponse map[string]any
+
+type LiveRecordAsrTaskStatusResponse map[string]any
+
+type LiveRecordCaptionsResponse map[string]any
 
 type ActivityReadsForUserResponse struct {
 	ActivityReads []*activities.ActivityRead `json:"activity_reads"`
@@ -98,11 +116,41 @@ type CourseAccessCodeResponse struct {
 	Resetable  bool   `json:"resetable"`
 }
 
+type CourseAccessCodeValidationResponse struct {
+	Message string `json:"message,omitempty"`
+}
+
+type OpenedOrgsResponse struct {
+	Orgs []*model.OrgDetail `json:"orgs"`
+}
+
 type EntryRecordResponse map[string]any
 
 type OnlineVideoCompletenessSettingResponse map[string]any
 
 type PerformanceScoreSettingResponse map[string]any
+
+type AnnounceScoreSettingsResponse map[string]any
+
+type PerformanceScorePercentageResponse map[string]any
+
+type WarningListResponse map[string]any
+
+type WarningResponse map[string]any
+
+type WarningThresholdResponse map[string]any
+
+type WarningStudentsResponse map[string]any
+
+type ScoreRanksResponse map[string]any
+
+type ScoreItemSettingsResponse map[string]any
+
+type EnrollmentRawScoreResponse map[string]any
+
+type CourseScoreTypeResponse struct {
+	ScoreType string `json:"score_type,omitempty"`
+}
 
 type StudentsPerformanceResponse map[string]any
 
@@ -113,6 +161,22 @@ type StudentSelfScoreResponse map[string]any
 type RollcallScoreResponse map[string]any
 
 type PerformanceScoreResponse map[string]any
+
+type CourseQuestionnairesResponse map[string]any
+
+type QuestionnaireListResponse map[string]any
+
+type QuestionnaireScoresResponse map[string]any
+
+type CourseWebLinkScoresResponse map[string]any
+
+type CourseVirtualExperimentScoresResponse map[string]any
+
+type CourseVirtualExperimentsResponse map[string]any
+
+type AllActivitiesResponse map[string]any
+
+type SHTVUGroupsResponse map[string]any
 
 type ScoreDistributionResponse map[string]any
 
@@ -129,6 +193,16 @@ type CourseCountResponse map[string]any
 type SettingsResponse map[string]any
 
 type BlueprintSubItemsResultResponse map[string]any
+
+type BlueprintAllSubActivitiesCountResponse map[string]any
+
+type BlueprintSubCoursesResponse struct {
+	Courses []*Course `json:"courses"`
+}
+
+type BlueprintCheckPrerequisitesResponse struct {
+	HasPrerequisites bool `json:"has_prerequisites"`
+}
 
 type BlueprintSubmittedInfoResponse struct {
 	UnableSync []*BlueprintSubmittedInfo `json:"unable_sync,omitempty"`

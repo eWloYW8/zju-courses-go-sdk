@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
 	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
@@ -59,8 +60,27 @@ func (s *Service) ListUserCreditStatesTyped(ctx context.Context, params ListCred
 
 // GetUserToken returns the user's AI token.
 func (s *Service) GetUserToken(ctx context.Context) (json.RawMessage, error) {
+	return s.GetUserTokenWithParams(ctx, UserTokenParams{})
+}
+
+// GetUserTokenWithParams returns the user's AI token with the frontend module/resource query shape.
+func (s *Service) GetUserTokenWithParams(ctx context.Context, params UserTokenParams) (json.RawMessage, error) {
+	query := map[string]string{}
+	if params.ModuleID != 0 {
+		query["module_id"] = fmt.Sprintf("%d", params.ModuleID)
+	}
+	if params.ModuleType != "" {
+		query["module_type"] = params.ModuleType
+	}
+	if params.ResourceName != "" {
+		query["resource_name"] = params.ResourceName
+	}
+	if params.UploadID != 0 {
+		query["upload_id"] = fmt.Sprintf("%d", params.UploadID)
+	}
+	u := addQueryParams("/api/air-credit/user/token", query)
 	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/air-credit/user/token", &result)
+	_, err := s.client.Get(ctx, u, &result)
 	return result, err
 }
 
@@ -82,10 +102,7 @@ func (s *Service) ExportUserCreditStatesStats(ctx context.Context, body interfac
 
 // GetCourseCreditInfo returns AI credit info for a course.
 func (s *Service) GetCourseCreditInfo(ctx context.Context, courseID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/air-credit/course/%d", courseID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
-	return result, err
+	return s.GetCourseCredit(ctx, courseID)
 }
 
 // GetCourseCreditStates returns credit states for a course.
@@ -340,6 +357,14 @@ func (s *Service) GetCourseCredit(ctx context.Context, courseID int) (json.RawMe
 	return result, err
 }
 
+// GetCourseToken returns the AI token for a course.
+func (s *Service) GetCourseToken(ctx context.Context, courseID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/air-credit/course/%d/token", courseID)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // GetInstructorCurrentSemesterCourses returns instructor courses for current semester.
 func (s *Service) GetInstructorCurrentSemesterCourses(ctx context.Context) (json.RawMessage, error) {
 	var result json.RawMessage
@@ -418,6 +443,36 @@ func (s *Service) OptimizeText(ctx context.Context, body interface{}) (json.RawM
 	var result json.RawMessage
 	_, err := s.client.Post(ctx, "/api/text-optimization", body, &result)
 	return result, err
+}
+
+// StartLessonPlanGenerate starts the lesson-plan generation SSE stream for a course.
+func (s *Service) StartLessonPlanGenerate(ctx context.Context, courseID int, body LessonPlanStreamRequest) (*http.Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodPost, fmt.Sprintf("/api/courses/%d/lesson-plan/generate", courseID), body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	return s.client.HTTPClient().Do(req)
+}
+
+// StartLessonPlanOptimize starts the lesson-plan optimization SSE stream for a course.
+func (s *Service) StartLessonPlanOptimize(ctx context.Context, courseID int, body LessonPlanStreamRequest) (*http.Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodPost, fmt.Sprintf("/api/courses/%d/lesson-plan/optimize", courseID), body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	return s.client.HTTPClient().Do(req)
+}
+
+// ExportLessonPlan exports a lesson plan document blob for the given chapters/template.
+func (s *Service) ExportLessonPlan(ctx context.Context, courseID int, body ExportLessonPlanRequest) ([]byte, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodPost, fmt.Sprintf("/api/courses/%d/lesson-plan/export", courseID), body)
+	if err != nil {
+		return nil, err
+	}
+	_, data, err := s.client.DoBytes(req)
+	return data, err
 }
 
 func addListOptions(urlStr string, opts *model.ListOptions) string {

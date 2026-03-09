@@ -95,6 +95,21 @@ func (s *Service) DeleteUpload(ctx context.Context, uploadID int) error {
 	return err
 }
 
+// DeleteUploadNoIntercept deletes an uploaded file with the frontend no-intercept query.
+func (s *Service) DeleteUploadNoIntercept(ctx context.Context, uploadID int) error {
+	u := fmt.Sprintf("/api/uploads/%d?no-intercept=true", uploadID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// StartUploadEsign starts e-sign generation for an upload.
+func (s *Service) StartUploadEsign(ctx context.Context, uploadID int) (*StartEsignResponse, error) {
+	u := fmt.Sprintf("/api/uploads/%d/start-esign", uploadID)
+	result := new(StartEsignResponse)
+	_, err := s.client.Post(ctx, u, nil, result)
+	return result, err
+}
+
 // UpdateUpload updates upload metadata.
 func (s *Service) UpdateUpload(ctx context.Context, uploadID int, body interface{}) (*Upload, error) {
 	u := fmt.Sprintf("/api/uploads/%d", uploadID)
@@ -341,6 +356,14 @@ func (s *Service) UploadH5Courseware(ctx context.Context, uploadID int, body int
 	return result, err
 }
 
+// ValidateH5CoursewareUnzip validates the uploaded H5 package and returns completion support flags.
+func (s *Service) ValidateH5CoursewareUnzip(ctx context.Context, uploadID int) (*H5CoursewareValidateResponse, error) {
+	u := fmt.Sprintf("/api/h5-courseware/upload/%d/validate-unzip", uploadID)
+	result := new(H5CoursewareValidateResponse)
+	_, err := s.client.Put(ctx, u, nil, result)
+	return result, err
+}
+
 // --- SCORM ---
 
 // UploadSCORM uploads SCORM content.
@@ -381,18 +404,20 @@ func (s *Service) GetMediaCaptionProgress(ctx context.Context, mediaIDs string) 
 
 // --- Duplicate Detection ---
 
-// CheckDuplicate checks a file for duplicate content.
-func (s *Service) CheckDuplicate(ctx context.Context, fileID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/duplicate-detect/file/%d", fileID)
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
-	return result, err
+// CheckDuplicate returns the raw duplicate-detect source file contents.
+func (s *Service) CheckDuplicate(ctx context.Context, fileKey string) ([]byte, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodGet, fmt.Sprintf("/api/duplicate-detect/file/%s/raw", fileKey), nil)
+	if err != nil {
+		return nil, err
+	}
+	_, data, err := s.client.DoBytes(req)
+	return data, err
 }
 
-// DownloadDuplicateReport downloads a duplicate detection report.
-func (s *Service) DownloadDuplicateReport(ctx context.Context) (json.RawMessage, error) {
-	var result json.RawMessage
-	_, err := s.client.Get(ctx, "/api/duplicate-detect/report/download", &result)
+// DownloadDuplicateReport requests a duplicate-detection report download ticket.
+func (s *Service) DownloadDuplicateReport(ctx context.Context, body *DuplicateReportDownloadRequest) (*DuplicateReportDownloadInfo, error) {
+	result := new(DuplicateReportDownloadInfo)
+	_, err := s.client.Post(ctx, "/api/duplicate-detect/report/download", body, result)
 	return result, err
 }
 

@@ -20,6 +20,8 @@ type Service struct {
 	client *sdk.Client
 }
 
+const sharedResourceSearchFields = "org_id,id,name,view_count,like_count,created_at,group,created_by_name,save_count,collection_count,download_count,referrer_type,referrer_id,upload,classification,allow_download,allow_save"
+
 func apiPrefix(anonymous bool) string {
 	if anonymous {
 		return "/anonymous-api"
@@ -223,8 +225,17 @@ func (s *Service) ListPublicResources(ctx context.Context) (json.RawMessage, err
 
 // ListSharedResourcesToMe returns resources shared to the current user.
 func (s *Service) ListSharedResourcesToMe(ctx context.Context) (*SharedResourcesResponse, error) {
+	return s.ListSharedResourcesToMeWithParams(ctx, ListSharedResourcesParams{})
+}
+
+// ListSharedResourcesToMeWithParams returns resources shared to the current user with the frontend paging query.
+func (s *Service) ListSharedResourcesToMeWithParams(ctx context.Context, params ListSharedResourcesParams) (*SharedResourcesResponse, error) {
 	result := new(SharedResourcesResponse)
-	_, err := s.client.Get(ctx, "/api/shared-resources-to-me", result)
+	u := addListOptions("/api/shared-resources-to-me", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if params.Conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": params.Conditions})
+	}
+	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
 
@@ -344,6 +355,17 @@ func (s *Service) ListSharedResourcesFromMe(ctx context.Context, opts *model.Lis
 	return result, err
 }
 
+// ListSharedResourcesFromMeWithPrefix returns shared resources created by the current user from either /api or /anonymous-api.
+func (s *Service) ListSharedResourcesFromMeWithPrefix(ctx context.Context, anonymous bool, params ListSharedResourcesParams) (*SharedResourcesResponse, error) {
+	u := addListOptions(apiPrefix(anonymous)+"/shared-resources/from-me", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	if params.Conditions != "" {
+		u = addQueryParams(u, map[string]string{"conditions": params.Conditions})
+	}
+	result := new(SharedResourcesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // ListMostLikedSharedResources returns most liked shared resources.
 func (s *Service) ListMostLikedSharedResources(ctx context.Context, conditions string) (*SharedResourcesResponse, error) {
 	u := "/api/shared-resources/most-liked"
@@ -419,9 +441,16 @@ func (s *Service) ListHomepageSharedResources(ctx context.Context, anonymous boo
 // SearchSharedResourcesWithPrefix searches shared resources through the /api or /anonymous-api listing endpoint.
 func (s *Service) SearchSharedResourcesWithPrefix(ctx context.Context, anonymous bool, params ListSharedResourcesParams) (*SharedResourcesResponse, error) {
 	u := addListOptions(apiPrefix(anonymous)+"/shared-resources", &model.ListOptions{Page: params.Page, PageSize: params.PageSize})
+	query := map[string]string{}
 	if params.Conditions != "" {
-		u = addQueryParams(u, map[string]string{"conditions": params.Conditions})
+		query["conditions"] = params.Conditions
 	}
+	fields := params.Fields
+	if fields == "" {
+		fields = sharedResourceSearchFields
+	}
+	query["fields"] = fields
+	u = addQueryParams(u, query)
 	result := new(SharedResourcesResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err

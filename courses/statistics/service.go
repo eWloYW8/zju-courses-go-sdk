@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
+
 	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
 )
 
@@ -47,6 +50,41 @@ func (s *Service) PostUserActions(ctx context.Context, jwt string, body UserActi
 	u := fmt.Sprintf("/api/user-actions?jwt=%s", jwt)
 	_, err := s.client.Post(ctx, u, body, nil)
 	return err
+}
+
+// CheckUserVisitsAccessible preflights the user-visits endpoint used by the frontend tracker.
+func (s *Service) CheckUserVisitsAccessible(ctx context.Context) error {
+	req, err := s.client.NewRequest(ctx, http.MethodOptions, "/api/user-visits", nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.client.Do(req, nil)
+	return err
+}
+
+// TrackUserVisit reports a user-visit tracking payload.
+func (s *Service) TrackUserVisit(ctx context.Context, jwt string, body TrackingRequest) error {
+	return s.postTracking(ctx, "/api/user-visits", jwt, body)
+}
+
+// TrackUserReplyVisit reports a user-reply visit tracking payload.
+func (s *Service) TrackUserReplyVisit(ctx context.Context, jwt string, body TrackingRequest) error {
+	return s.postTracking(ctx, "/api/user-reply-visits", jwt, body)
+}
+
+// TrackZhiyunVisit reports a Zhiyun visit tracking payload.
+func (s *Service) TrackZhiyunVisit(ctx context.Context, jwt string, body TrackingRequest) error {
+	return s.postTracking(ctx, "/api/zhiyun-visits", jwt, body)
+}
+
+// TrackVTRSVisit reports a VTRS tracking payload.
+func (s *Service) TrackVTRSVisit(ctx context.Context, jwt string, body TrackingRequest) error {
+	return s.postTracking(ctx, "/api/vtrs", jwt, body)
+}
+
+// TrackVTRSResourceVisit reports a VTRS resource tracking payload.
+func (s *Service) TrackVTRSResourceVisit(ctx context.Context, jwt string, body TrackingRequest) error {
+	return s.postTracking(ctx, "/api/vtrs-resource", jwt, body)
 }
 
 // --- Course Statistics ---
@@ -130,7 +168,7 @@ func (s *Service) GetVTRSesStats(ctx context.Context, vtrsID int) (json.RawMessa
 func (s *Service) GetVTRSOverview(ctx context.Context, vtrsID int, dateRange string) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/stat/vtrses/%d/overview", vtrsID)
 	if dateRange != "" {
-		u = addQueryParams(u, map[string]string{"dateRange": dateRange})
+		u = addQueryParams(u, map[string]string{"date_range": dateRange})
 	}
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
@@ -141,7 +179,7 @@ func (s *Service) GetVTRSOverview(ctx context.Context, vtrsID int, dateRange str
 func (s *Service) GetVTRSResourcesRank(ctx context.Context, vtrsID int, dateRange string) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/stat/vtrses/%d/resources/rank", vtrsID)
 	if dateRange != "" {
-		u = addQueryParams(u, map[string]string{"dateRange": dateRange})
+		u = addQueryParams(u, map[string]string{"date_range": dateRange})
 	}
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
@@ -152,7 +190,7 @@ func (s *Service) GetVTRSResourcesRank(ctx context.Context, vtrsID int, dateRang
 func (s *Service) GetVTRSTrialTeaching(ctx context.Context, vtrsID int, dateRange string) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/stat/vtrses/%d/trial-teaching", vtrsID)
 	if dateRange != "" {
-		u = addQueryParams(u, map[string]string{"dateRange": dateRange})
+		u = addQueryParams(u, map[string]string{"date_range": dateRange})
 	}
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
@@ -170,7 +208,18 @@ func (s *Service) GetVTRSDepartment(ctx context.Context, vtrsID int) (json.RawMe
 // GetVTRSTeamActivation returns VTRS team activation statistics.
 func (s *Service) GetVTRSTeamActivation(ctx context.Context, vtrsID int, opts map[string]string) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/stat/vtrses/%d/team-activation", vtrsID)
-	u = addQueryParams(u, opts)
+	query := map[string]string{}
+	for key, value := range opts {
+		switch key {
+		case "dateRange":
+			query["date_range"] = value
+		case "pageSize":
+			query["page_size"] = value
+		default:
+			query[key] = value
+		}
+	}
+	u = addQueryParams(u, query)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
@@ -180,7 +229,7 @@ func (s *Service) GetVTRSTeamActivation(ctx context.Context, vtrsID int, opts ma
 func (s *Service) GetVTRSResources(ctx context.Context, vtrsID int, dateRange string) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/stat/vtrses/%d/resources", vtrsID)
 	if dateRange != "" {
-		u = addQueryParams(u, map[string]string{"dateRange": dateRange})
+		u = addQueryParams(u, map[string]string{"date_range": dateRange})
 	}
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
@@ -210,6 +259,45 @@ func (s *Service) GetUserCompleteness(ctx context.Context, params UserCompletene
 	var result UserCompletenessResponse
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
+}
+
+// ExportONOStatStudents exports ONO student visit statistics in the frontend format.
+func (s *Service) ExportONOStatStudents(ctx context.Context, format string, params ExportONOStatStudentsParams, body ExportONOStatStudentsRequest) ([]byte, error) {
+	u := fmt.Sprintf("/cooc/stat-students/export/%s", format)
+	query := map[string]string{}
+	if params.StartDate != "" {
+		query["start_date"] = params.StartDate
+	}
+	if params.EndDate != "" {
+		query["end_date"] = params.EndDate
+	}
+	if params.Conditions != nil {
+		switch value := params.Conditions.(type) {
+		case string:
+			query["conditions"] = value
+		default:
+			encoded, err := json.Marshal(value)
+			if err != nil {
+				return nil, err
+			}
+			query["conditions"] = string(encoded)
+		}
+	}
+	req, err := s.client.NewRequest(ctx, "POST", addQueryParams(u, query), body)
+	if err != nil {
+		return nil, err
+	}
+	_, data, err := s.client.DoBytes(req)
+	return data, err
+}
+
+func (s *Service) postTracking(ctx context.Context, path, jwt string, body TrackingRequest) error {
+	u := path
+	if jwt != "" {
+		u = fmt.Sprintf("%s?jwt=%s", path, url.QueryEscape(jwt))
+	}
+	_, err := s.client.Post(ctx, u, body, nil)
+	return err
 }
 
 func addQueryParams(urlStr string, params map[string]string) string {

@@ -179,6 +179,31 @@ func TestKnowledgeFrontendHelpersUseAnonymousMultipartAndExportEndpoints(t *test
 			}
 			w.Header().Set("Content-Type", "text/event-stream")
 			_, _ = io.WriteString(w, "data: ok\n\n")
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/3/knowledge-base":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"id":7,"name":"KB"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/course/3/knowledge-base/7/resources/uploads":
+			assertMultipartFields(t, r, map[string]string{}, true)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"id":15,"status":"processing"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/3/knowledge-base/7/resources":
+			if got := r.URL.Query().Get("page"); got != "1" {
+				t.Fatalf("unexpected kb page query: %q", got)
+			}
+			if got := r.URL.Query().Get("page_size"); got != "10" {
+				t.Fatalf("unexpected kb page_size query: %q", got)
+			}
+			if got := r.URL.Query().Get("conditions"); got != `{"keyword":"pdf"}` {
+				t.Fatalf("unexpected kb conditions query: %q", got)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"page":1,"page_size":10,"pages":1,"total":1,"items":[{"id":15,"name":"doc.pdf","status":"ready"}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/course/3/knowledge-base/7/resources/remove":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"removed":true}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/course/3/knowledge-base/7/resources/retry":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"retried":1}`))
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
 		}
@@ -249,6 +274,35 @@ func TestKnowledgeFrontendHelpersUseAnonymousMultipartAndExportEndpoints(t *test
 		t.Fatalf("StartKnowledgeNodesAIParse returned error: %v", err)
 	}
 	_ = resp.Body.Close()
+
+	kb, err := service.GetKnowledgeBase(ctx, 3)
+	if err != nil || kb["id"] != float64(7) {
+		t.Fatalf("unexpected knowledge base: %#v, err=%v", kb, err)
+	}
+
+	uploaded, err := service.UploadKnowledgeBaseResource(ctx, 3, 7, strings.NewReader("pdf"), "doc.pdf")
+	if err != nil || uploaded["status"] != "processing" {
+		t.Fatalf("unexpected uploaded knowledge base resource: %#v, err=%v", uploaded, err)
+	}
+
+	resources, err := service.ListKnowledgeBaseResources(ctx, 3, 7, ListKnowledgeBaseResourcesParams{
+		Page:       1,
+		PageSize:   10,
+		Conditions: map[string]any{"keyword": "pdf"},
+	})
+	if err != nil || len(resources.Items) != 1 || resources.Items[0]["name"] != "doc.pdf" {
+		t.Fatalf("unexpected knowledge base resources: %#v, err=%v", resources, err)
+	}
+
+	removed, err := service.RemoveKnowledgeBaseResource(ctx, 3, 7, 15)
+	if err != nil || removed["removed"] != true {
+		t.Fatalf("unexpected remove knowledge base resource response: %#v, err=%v", removed, err)
+	}
+
+	retried, err := service.RetryKnowledgeBaseResource(ctx, 3, 7, []int{15})
+	if err != nil || retried["retried"] != float64(1) {
+		t.Fatalf("unexpected retry knowledge base resource response: %#v, err=%v", retried, err)
+	}
 }
 
 func assertMultipartFields(t *testing.T, r *http.Request, expectedFields map[string]string, expectFile bool) {

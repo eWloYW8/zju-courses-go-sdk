@@ -267,6 +267,205 @@ func TestCancelBlueprintActivitySyncUsesDeleteBody(t *testing.T) {
 	}
 }
 
+func TestRecordEntryUsesFrontendPostEndpoint(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/api/course/18/entry/record" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"recorded":true}`))
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	result, err := service.RecordEntry(context.Background(), 18)
+	if err != nil {
+		t.Fatalf("RecordEntry returned error: %v", err)
+	}
+	if string(result) != `{"recorded":true}` {
+		t.Fatalf("unexpected record entry payload: %s", string(result))
+	}
+
+	compat, err := service.GetEntryRecord(context.Background(), 18)
+	if err != nil {
+		t.Fatalf("GetEntryRecord returned error: %v", err)
+	}
+	if string(compat) != `{"recorded":true}` {
+		t.Fatalf("unexpected compatibility payload: %s", string(compat))
+	}
+}
+
+func TestGetCombineCourseActivityReadSubCourseIDsUsesFrontendEndpoint(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/api/combine-courses/11/activity-read-sub-course-ids" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.URL.Query().Get("activity_id"); got != "23" {
+			t.Fatalf("unexpected activity_id query: %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[5,8]`))
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	result, err := service.GetCombineCourseActivityReadSubCourseIDs(context.Background(), 11, 23)
+	if err != nil {
+		t.Fatalf("GetCombineCourseActivityReadSubCourseIDs returned error: %v", err)
+	}
+	if len(result) != 2 || result[0] != 5 || result[1] != 8 {
+		t.Fatalf("unexpected sub-course ids: %#v", result)
+	}
+}
+
+func TestBlueprintSubCourseHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/blueprint/11/sub-courses":
+			if got := r.URL.Query().Get("keyword"); got != "算法" {
+				t.Fatalf("unexpected keyword: %s", got)
+			}
+			if got := r.URL.Query().Get("source_id"); got != "6" {
+				t.Fatalf("unexpected source_id: %s", got)
+			}
+			if got := r.URL.Query().Get("source_type"); got != "course" {
+				t.Fatalf("unexpected source_type: %s", got)
+			}
+			_, _ = w.Write([]byte(`{
+				"courses":[
+					{
+						"id":21,
+						"name":"算法设计与分析",
+						"course_code":"211G0210",
+						"status":"ongoing",
+						"archived":false,
+						"is_instructor":true,
+						"course_attributes":{"teaching_class_name":"算法2301"},
+						"department":{"id":7,"name":"计算机学院"},
+						"academic_year":{"id":4,"name":"2025-2026"},
+						"semester":{"id":2,"name":"春","real_name":"春夏"},
+						"instructors":[{"id":3,"name":"王老师"}]
+					}
+				]
+			}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/blueprint/11/sub-courses":
+			var body BindBlueprintSubCoursesRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode bind body: %v", err)
+			}
+			if len(body.SubCourseIDs) != 2 || body.SubCourseIDs[0] != 21 || body.SubCourseIDs[1] != 22 {
+				t.Fatalf("unexpected bind body: %#v", body)
+			}
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodPost && r.URL.Path == "/api/blueprint/11/check-prerequisites":
+			var body CheckBlueprintPrerequisitesRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode prerequisites body: %v", err)
+			}
+			if len(body.Sources) != 1 || body.Sources[0]["type"] != "homework" {
+				t.Fatalf("unexpected prerequisites body: %#v", body)
+			}
+			_, _ = w.Write([]byte(`{"has_prerequisites":true}`))
+		case r.Method == http.MethodDelete && r.URL.Path == "/api/blueprint/11/sub-courses/21":
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodPost && r.URL.Path == "/api/blueprint/sub-courses/21/name":
+			var body RenameBlueprintSubCourseRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode rename body: %v", err)
+			}
+			if body.Name != "蓝图子课程" {
+				t.Fatalf("unexpected rename body: %#v", body)
+			}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	list, err := service.ListBlueprintSubCoursesWithParams(context.Background(), 11, &ListBlueprintSubCoursesParams{
+		Keyword:    "算法",
+		SourceID:   6,
+		SourceType: "course",
+	})
+	if err != nil {
+		t.Fatalf("ListBlueprintSubCoursesWithParams returned error: %v", err)
+	}
+	if len(list.Courses) != 1 || list.Courses[0].CourseAttributes == nil || list.Courses[0].CourseAttributes.TeachingClassName != "算法2301" {
+		t.Fatalf("unexpected sub-courses: %#v", list.Courses)
+	}
+	if list.Courses[0].Department == nil || list.Courses[0].Department.Name != "计算机学院" {
+		t.Fatalf("department did not decode: %#v", list.Courses[0].Department)
+	}
+	if list.Courses[0].Semester == nil || list.Courses[0].Semester.RealName != "春夏" {
+		t.Fatalf("semester did not decode: %#v", list.Courses[0].Semester)
+	}
+
+	if err := service.BindBlueprintSubCourses(context.Background(), 11, &BindBlueprintSubCoursesRequest{SubCourseIDs: []int{21, 22}}); err != nil {
+		t.Fatalf("BindBlueprintSubCourses returned error: %v", err)
+	}
+
+	check, err := service.CheckBlueprintPrerequisites(context.Background(), 11, &CheckBlueprintPrerequisitesRequest{
+		Sources: []BlueprintPrerequisiteSource{{"id": 9, "type": "homework"}},
+	})
+	if err != nil {
+		t.Fatalf("CheckBlueprintPrerequisites returned error: %v", err)
+	}
+	if !check.HasPrerequisites {
+		t.Fatalf("expected has_prerequisites to decode")
+	}
+
+	if err := service.DeleteBlueprintSubCourse(context.Background(), 11, 21); err != nil {
+		t.Fatalf("DeleteBlueprintSubCourse returned error: %v", err)
+	}
+	if err := service.RenameBlueprintSubCourse(context.Background(), 21, &RenameBlueprintSubCourseRequest{Name: "蓝图子课程"}); err != nil {
+		t.Fatalf("RenameBlueprintSubCourse returned error: %v", err)
+	}
+}
+
+func TestSyncBlueprintUsesFrontendBody(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/api/blueprint/11/sync" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		var body SyncBlueprintRequest
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if len(body.TargetCourseIDs) != 2 || body.TargetCourseIDs[0] != 21 || body.Publish == nil || !*body.Publish {
+			t.Fatalf("unexpected body: %#v", body)
+		}
+		sources, ok := body.Sources.([]any)
+		if !ok || len(sources) != 1 {
+			t.Fatalf("unexpected sources: %#v", body.Sources)
+		}
+		_, _ = w.Write([]byte(`{"message":"ok"}`))
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	publish := true
+	_, err := service.SyncBlueprint(context.Background(), 11, SyncBlueprintRequest{
+		Sources:         []map[string]any{{"id": 9, "type": "homework"}},
+		TargetCourseIDs: []int{21, 22},
+		Publish:         &publish,
+	})
+	if err != nil {
+		t.Fatalf("SyncBlueprint returned error: %v", err)
+	}
+}
+
 func TestGetAssistantPermissions(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/course/15/assistant-permissions" {
@@ -318,6 +517,37 @@ func TestMailToEnrollments(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("MailToEnrollments returned error: %v", err)
+	}
+}
+
+func TestCourseJoinPopupHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/access-code/ABCDEFG/validate":
+			_, _ = w.Write([]byte(`{"message":"ok"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/toggle-opened-orgs":
+			if got := r.URL.Query().Get("toggle"); got != "org_team_teaching" {
+				t.Fatalf("unexpected toggle query: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"orgs":[{"id":3,"name":"紫金港校区","code":"ZJG"}]}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	validation, err := service.ValidateCourseAccessCode(ctx, "ABCDEFG")
+	if err != nil || validation.Message != "ok" {
+		t.Fatalf("unexpected access-code validation: %#v, err=%v", validation, err)
+	}
+
+	orgs, err := service.ListTeamTeachingOpenedOrgs(ctx)
+	if err != nil || len(orgs.Orgs) != 1 || orgs.Orgs[0].Name != "紫金港校区" || orgs.Orgs[0].Code != "ZJG" {
+		t.Fatalf("unexpected opened orgs: %#v, err=%v", orgs, err)
 	}
 }
 
@@ -559,5 +789,299 @@ func TestScoreAndCompletenessHelpersUseFrontendEndpoints(t *testing.T) {
 	}
 	if score, err := service.GetOnlineVideoCompletenessScore(ctx, 14); err != nil || (*score)["score"] != float64(5) {
 		t.Fatalf("unexpected online-video-completeness score: %#v, err=%v", score, err)
+	}
+}
+
+func TestWarningAndScoreHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/courses/14/announce-score-settings":
+			_, _ = w.Write([]byte(`{"enabled":true}`))
+		case r.Method == http.MethodPut && r.URL.Path == "/api/courses/14/announce-score-settings":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode announce-score-settings body: %v", err)
+			}
+			if body["enabled"] != true {
+				t.Fatalf("unexpected announce-score-settings body: %#v", body)
+			}
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/performance/score-percentage":
+			_, _ = w.Write([]byte(`{"score_percentage":15}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/warnings":
+			if got := r.URL.Query().Get("fields"); got != "id,title" {
+				t.Fatalf("unexpected warnings fields: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"warnings":[{"id":5,"title":"预警"}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/warnings/5":
+			_, _ = w.Write([]byte(`{"id":5,"title":"预警"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/warnings/5/threshold":
+			_, _ = w.Write([]byte(`{"min_score":60}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/course/14/warnings/5/threshold":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode create warning threshold body: %v", err)
+			}
+			if body["min_score"] != float64(60) {
+				t.Fatalf("unexpected create warning threshold body: %#v", body)
+			}
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodPut && r.URL.Path == "/api/course/14/warnings/5/threshold":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode update warning threshold body: %v", err)
+			}
+			if body["min_score"] != float64(70) {
+				t.Fatalf("unexpected update warning threshold body: %#v", body)
+			}
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/warnings/5/students":
+			if got := r.URL.Query().Get("fields"); got != "id,name" {
+				t.Fatalf("unexpected warning students fields: %q", got)
+			}
+			if got := r.URL.Query().Get("conditions"); got != `{"keyword":"alice"}` {
+				t.Fatalf("unexpected warning students conditions: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"students":[{"id":9,"name":"Alice"}]}`))
+		case r.Method == http.MethodPut && r.URL.Path == "/api/warning/student/9/comment":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode warning student comment body: %v", err)
+			}
+			if body["comment"] != "follow up" {
+				t.Fatalf("unexpected warning student comment body: %#v", body)
+			}
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodDelete && r.URL.Path == "/api/course/14/warning-students/9":
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodGet && r.URL.Path == "/api/courses/14/score-ranks":
+			_, _ = w.Write([]byte(`{"items":[{"label":"A","count":1}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/courses/14/score-item-settings":
+			_, _ = w.Write([]byte(`{"items":[{"id":1}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/courses/14/enrollment-raw-score":
+			_, _ = w.Write([]byte(`{"items":[{"student_id":3,"score":95}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/courses/14/exam/score-type":
+			_, _ = w.Write([]byte(`{"score_type":"percentage"}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	if settings, err := service.GetAnnounceScoreSettings(ctx, 14); err != nil || (*settings)["enabled"] != true {
+		t.Fatalf("unexpected announce-score-settings: %#v, err=%v", settings, err)
+	}
+
+	if err := service.UpdateAnnounceScoreSettings(ctx, 14, map[string]any{"enabled": true}); err != nil {
+		t.Fatalf("UpdateAnnounceScoreSettings returned error: %v", err)
+	}
+
+	if percentage, err := service.GetPerformanceScorePercentage(ctx, 14); err != nil || (*percentage)["score_percentage"] != float64(15) {
+		t.Fatalf("unexpected performance score percentage: %#v, err=%v", percentage, err)
+	}
+
+	if warnings, err := service.ListWarnings(ctx, 14, "id,title"); err != nil || len((*warnings)["warnings"].([]any)) != 1 {
+		t.Fatalf("unexpected warnings list: %#v, err=%v", warnings, err)
+	}
+
+	if warning, err := service.GetWarning(ctx, 14, 5); err != nil || (*warning)["id"] != float64(5) {
+		t.Fatalf("unexpected warning: %#v, err=%v", warning, err)
+	}
+
+	if threshold, err := service.GetWarningThreshold(ctx, 14, 5); err != nil || (*threshold)["min_score"] != float64(60) {
+		t.Fatalf("unexpected warning threshold: %#v, err=%v", threshold, err)
+	}
+
+	if err := service.CreateWarningThreshold(ctx, 14, 5, map[string]any{"min_score": 60}); err != nil {
+		t.Fatalf("CreateWarningThreshold returned error: %v", err)
+	}
+
+	if err := service.UpdateWarningThreshold(ctx, 14, 5, map[string]any{"min_score": 70}); err != nil {
+		t.Fatalf("UpdateWarningThreshold returned error: %v", err)
+	}
+
+	if students, err := service.ListWarningStudents(ctx, 14, 5, &WarningStudentsParams{
+		Fields:     "id,name",
+		Conditions: map[string]any{"keyword": "alice"},
+	}); err != nil || len((*students)["students"].([]any)) != 1 {
+		t.Fatalf("unexpected warning students: %#v, err=%v", students, err)
+	}
+
+	if err := service.UpdateWarningStudentComment(ctx, 9, map[string]any{"comment": "follow up"}); err != nil {
+		t.Fatalf("UpdateWarningStudentComment returned error: %v", err)
+	}
+
+	if err := service.DeleteWarningStudent(ctx, 14, 9); err != nil {
+		t.Fatalf("DeleteWarningStudent returned error: %v", err)
+	}
+
+	if ranks, err := service.GetScoreRanks(ctx, 14); err != nil || len((*ranks)["items"].([]any)) != 1 {
+		t.Fatalf("unexpected score-ranks: %#v, err=%v", ranks, err)
+	}
+
+	if settings, err := service.GetScoreItemSettings(ctx, 14); err != nil || len((*settings)["items"].([]any)) != 1 {
+		t.Fatalf("unexpected score-item-settings: %#v, err=%v", settings, err)
+	}
+
+	if rawScore, err := service.GetEnrollmentRawScore(ctx, 14); err != nil || len((*rawScore)["items"].([]any)) != 1 {
+		t.Fatalf("unexpected enrollment-raw-score: %#v, err=%v", rawScore, err)
+	}
+
+	if scoreType, err := service.GetCourseScoreType(ctx, 14, "exam"); err != nil || scoreType.ScoreType != "percentage" {
+		t.Fatalf("unexpected course score type: %#v, err=%v", scoreType, err)
+	}
+}
+
+func TestLegacyActivityAggregateHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/homework/submission-status":
+			if got := r.URL.Query().Get("no-intercept"); got != "true" {
+				t.Fatalf("unexpected homework submission status query: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"course_id":14,"homework_activities":[{"id":1}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/courses/14/exam-scores":
+			if got := r.URL.Query().Get("no-intercept"); got != "true" {
+				t.Fatalf("unexpected exam scores query: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"exam_scores":[{"id":2}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/courses/14/catalog-activities":
+			_, _ = w.Write([]byte(`{"items":[{"id":1}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/anonymous-api/courses/14/catalog-activities":
+			_, _ = w.Write([]byte(`{"items":[{"id":2}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/homework-submission-number":
+			_, _ = w.Write([]byte(`{"submitted":30}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/classroom-exam-scores":
+			_, _ = w.Write([]byte(`{"scores":[{"student_id":3,"score":88}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/courses/14/exam-submissions":
+			_, _ = w.Write([]byte(`{"submissions":[{"id":4}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/courses/14/create-groups":
+			_, _ = w.Write([]byte(`{"created":true}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/questionnaires":
+			_, _ = w.Write([]byte(`{"questionnaires":[{"id":5}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/courses/14/questionnaire-list":
+			if got := r.URL.Query().Get("page"); got != "2" {
+				t.Fatalf("unexpected questionnaire-list page: %q", got)
+			}
+			if got := r.URL.Query().Get("page_size"); got != "10" {
+				t.Fatalf("unexpected questionnaire-list page_size: %q", got)
+			}
+			if got := r.URL.Query().Get("conditions"); got != `{"keyword":"survey"}` {
+				t.Fatalf("unexpected questionnaire-list conditions: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"items":[{"id":6}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/questionnaire-scores":
+			_, _ = w.Write([]byte(`{"scores":[{"student_id":3,"score":90}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/web-link-scores":
+			_, _ = w.Write([]byte(`{"scores":[{"student_id":3,"score":91}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/virtual-experiment-scores":
+			_, _ = w.Write([]byte(`{"scores":[{"student_id":3,"score":92}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/virtual-experiments":
+			_, _ = w.Write([]byte(`{"items":[{"id":7}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/14/entry-refers":
+			_, _ = w.Write([]byte(`{"entry_refers":[{"id":9,"name":"矩阵","definition":"线性变换"}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/courses/14/all-activities":
+			if got := r.URL.Query().Get("module_ids"); got != "[1,2]" {
+				t.Fatalf("unexpected module_ids: %q", got)
+			}
+			if got := r.URL.Query().Get("activity_types"); got != "homework,exams" {
+				t.Fatalf("unexpected activity_types: %q", got)
+			}
+			if got := r.URL.Query().Get("no-loading-animation"); got != "true" {
+				t.Fatalf("unexpected no-loading-animation: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"activities":[{"id":8}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/live-records/21/task/asr":
+			_, _ = w.Write([]byte(`{"task_id":"asr-1"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/live-records/21/task/asr":
+			if got := r.URL.Query().Get("no-intercept"); got != "true" {
+				t.Fatalf("unexpected live-record asr status query: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"status":"running"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/live-records/21/caption":
+			_, _ = w.Write([]byte(`{"captions":[{"id":1}]}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/blueprint/14/all-sub-activities-count":
+			_, _ = w.Write([]byte(`{"count":12}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	if resp, err := service.GetHomeworkSubmissionStatus(ctx, 14); err != nil || len(resp.HomeworkActivities) != 1 {
+		t.Fatalf("unexpected homework submission status: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.ListExamScores(ctx, 14); err != nil || len(resp.ExamScores) != 1 {
+		t.Fatalf("unexpected exam scores: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.ListCatalogActivities(ctx, 14); err != nil || len((*resp)["items"].([]any)) != 1 {
+		t.Fatalf("unexpected catalog activities: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.ListCatalogActivitiesAnonymous(ctx, 14); err != nil || len((*resp)["items"].([]any)) != 1 {
+		t.Fatalf("unexpected anonymous catalog activities: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetHomeworkSubmissionNumber(ctx, 14); err != nil || (*resp)["submitted"] != float64(30) {
+		t.Fatalf("unexpected homework submission number: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetClassroomExamScores(ctx, 14); err != nil || len((*resp)["scores"].([]any)) != 1 {
+		t.Fatalf("unexpected classroom exam scores: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.ListExamSubmissions(ctx, 14); err != nil || len((*resp)["submissions"].([]any)) != 1 {
+		t.Fatalf("unexpected exam submissions: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.CreateSHTVUGroups(ctx, 14); err != nil || (*resp)["created"] != true {
+		t.Fatalf("unexpected create groups response: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.ListQuestionnaires(ctx, 14); err != nil || len((*resp)["questionnaires"].([]any)) != 1 {
+		t.Fatalf("unexpected questionnaires: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.ListQuestionnairesWithParams(ctx, 14, &ListQuestionnairesParams{
+		Page:       2,
+		PageSize:   10,
+		Conditions: map[string]any{"keyword": "survey"},
+	}); err != nil || len((*resp)["items"].([]any)) != 1 {
+		t.Fatalf("unexpected questionnaire list: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetQuestionnaireScores(ctx, 14); err != nil || len((*resp)["scores"].([]any)) != 1 {
+		t.Fatalf("unexpected questionnaire scores: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetCourseWebLinkScores(ctx, 14); err != nil || len((*resp)["scores"].([]any)) != 1 {
+		t.Fatalf("unexpected web-link scores: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetCourseVirtualExperimentScores(ctx, 14); err != nil || len((*resp)["scores"].([]any)) != 1 {
+		t.Fatalf("unexpected virtual-experiment scores: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.ListCourseVirtualExperiments(ctx, 14); err != nil || len((*resp)["items"].([]any)) != 1 {
+		t.Fatalf("unexpected virtual experiments: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.ListEntryRefers(ctx, 14); err != nil || len(resp.EntryRefers) != 1 || resp.EntryRefers[0].Name != "矩阵" {
+		t.Fatalf("unexpected entry refers: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.ListAllActivitiesByModuleIDs(ctx, 14, &ListAllActivitiesByModuleIDsParams{
+		ModuleIDs:               []int{1, 2},
+		ActivityTypes:           "homework,exams",
+		DisableLoadingAnimation: true,
+	}); err != nil || len((*resp)["activities"].([]any)) != 1 {
+		t.Fatalf("unexpected all activities response: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.CreateLiveRecordAsrTask(ctx, 21); err != nil || resp["task_id"] != "asr-1" {
+		t.Fatalf("unexpected live-record asr task response: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetLiveRecordAsrTaskStatus(ctx, 21); err != nil || resp["status"] != "running" {
+		t.Fatalf("unexpected live-record asr status: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetLiveRecordCaptions(ctx, 21); err != nil || len(resp["captions"].([]any)) != 1 {
+		t.Fatalf("unexpected live-record captions: %#v, err=%v", resp, err)
+	}
+	if resp, err := service.GetBlueprintAllSubActivitiesCount(ctx, 14); err != nil || (*resp)["count"] != float64(12) {
+		t.Fatalf("unexpected blueprint all-sub-activities count: %#v, err=%v", resp, err)
 	}
 }

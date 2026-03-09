@@ -6,6 +6,18 @@ type ListProjectsParams struct {
 	Conditions any
 }
 
+type ListEntriesParams struct {
+	Page       int
+	PageSize   int
+	Conditions any
+	Fields     string
+}
+
+type ListEntryReferencesParams struct {
+	Page     int
+	PageSize int
+}
+
 type CreateProjectRequest struct {
 	Name string `json:"name"`
 }
@@ -36,4 +48,9 @@ type DeleteProjectSharedResourceRequest struct {
 	ReferenceID int   `json:"reference_id"`
 	UploadID    int   `json:"upload_id"`
 	NodeIDs     []int `json:"node_ids,omitempty"`
+}
+
+type EntryKeyword struct {
+	ID   int    `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }

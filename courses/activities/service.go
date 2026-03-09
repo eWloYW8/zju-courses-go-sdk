@@ -153,6 +153,14 @@ func (s *Service) MarkActivityRead(ctx context.Context, activityID int) (*Activi
 	return result, err
 }
 
+// LogActivityRead logs activity read progress using the frontend JSON body shape.
+func (s *Service) LogActivityRead(ctx context.Context, activityID int, body interface{}) (ActivityReadLogResponse, error) {
+	u := fmt.Sprintf("/api/course/activities-read/%d", activityID)
+	result := make(ActivityReadLogResponse)
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
 // GetStudentSubmission returns a student's current submission for a course activity.
 func (s *Service) GetStudentSubmission(ctx context.Context, activityID, studentID int) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/course/activities/%d/students/%d/submission", activityID, studentID)
@@ -221,7 +229,29 @@ func (s *Service) GetActivityCompletionCriteria(ctx context.Context, courseID in
 	} else if courseID > 0 {
 		values.Set("course_id", strconv.Itoa(courseID))
 	}
+	values.Set("no-intercept", "true")
 	u := "/api/completion-criteria"
+	if encoded := values.Encode(); encoded != "" {
+		u += "?" + encoded
+	}
+	result := new(ActivityCompletionCriteriaResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetActivityCompletionCriteriaDetail returns completion criteria for a specific activity.
+func (s *Service) GetActivityCompletionCriteriaDetail(ctx context.Context, activityID int, query *ActivityCompletionCriteriaDetailQuery) (*ActivityCompletionCriteriaResponse, error) {
+	values := url.Values{}
+	if query != nil {
+		if query.ActivityType != "" {
+			values.Set("activity_type", query.ActivityType)
+		}
+		if query.CourseID > 0 {
+			values.Set("course_id", strconv.Itoa(query.CourseID))
+		}
+	}
+	values.Set("no-intercept", "true")
+	u := fmt.Sprintf("/api/activities/%d/completion-criteria", activityID)
 	if encoded := values.Encode(); encoded != "" {
 		u += "?" + encoded
 	}
@@ -293,6 +323,86 @@ func (s *Service) RemoveAllDependants(ctx context.Context, activityID int, activ
 	}
 	_, err := s.client.Put(ctx, u, body, nil)
 	return err
+}
+
+// GetSubmissionNumber returns submission-number stats for an activity.
+func (s *Service) GetSubmissionNumber(ctx context.Context, activityID int) (ActivitySubmissionNumberResponse, error) {
+	u := fmt.Sprintf("/api/activity/%d/submission-number", activityID)
+	result := make(ActivitySubmissionNumberResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// HasReviewedInterScore returns inter-review status for an activity.
+func (s *Service) HasReviewedInterScore(ctx context.Context, activityID int) (ActivityReviewStateResponse, error) {
+	u := fmt.Sprintf("/api/activity/%d/has-reviewed-inter-score", activityID)
+	result := make(ActivityReviewStateResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetHomeworkFirstSubmissionTime returns first-submission-time data for a homework activity.
+func (s *Service) GetHomeworkFirstSubmissionTime(ctx context.Context, activityID int) (HomeworkFirstSubmissionTimeResponse, error) {
+	u := fmt.Sprintf("/api/activity/%d/first-submission-time", activityID)
+	result := make(HomeworkFirstSubmissionTimeResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// IsInterReviewStarted returns whether inter-review has started.
+func (s *Service) IsInterReviewStarted(ctx context.Context, activityID int) (ActivityReviewStateResponse, error) {
+	u := fmt.Sprintf("/api/activity/%d/is-inter-review-started", activityID)
+	result := make(ActivityReviewStateResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// IsIntraReviewStarted returns whether intra-review has started.
+func (s *Service) IsIntraReviewStarted(ctx context.Context, activityID int) (ActivityReviewStateResponse, error) {
+	u := fmt.Sprintf("/api/activity/%d/is-intra-review-started", activityID)
+	result := make(ActivityReviewStateResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// IsHomeworkExpired returns whether a homework activity is expired.
+func (s *Service) IsHomeworkExpired(ctx context.Context, activityID int) (ActivityReviewStateResponse, error) {
+	u := fmt.Sprintf("/api/activity/%d/is-homework-expired", activityID)
+	result := make(ActivityReviewStateResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetActivityUploadsLicenseInfo returns uploads-license info for an activity.
+func (s *Service) GetActivityUploadsLicenseInfo(ctx context.Context, activityID int) (ActivityUploadsLicenseInfoResponse, error) {
+	u := fmt.Sprintf("/api/activities/%d/uploads-license", activityID)
+	result := make(ActivityUploadsLicenseInfoResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetOnlineVideoActivityReadCount returns read-count stats for an online-video activity.
+func (s *Service) GetOnlineVideoActivityReadCount(ctx context.Context, activityID int) (OnlineVideoActivityReadCountResponse, error) {
+	u := fmt.Sprintf("/api/online-videos/%d/activity-read-count", activityID)
+	result := make(OnlineVideoActivityReadCountResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetWebLinkScores returns score data for a web-link activity.
+func (s *Service) GetWebLinkScores(ctx context.Context, activityID int) (ActivityScoresResponse, error) {
+	u := fmt.Sprintf("/api/activities/%d/web-link-scores", activityID)
+	result := make(ActivityScoresResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetVirtualExperimentScores returns score data for a virtual-experiment activity.
+func (s *Service) GetVirtualExperimentScores(ctx context.Context, activityID int) (ActivityScoresResponse, error) {
+	u := fmt.Sprintf("/api/activities/%d/virtual-experiment-scores", activityID)
+	result := make(ActivityScoresResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
 }
 
 // --- Activity Lock Status ---

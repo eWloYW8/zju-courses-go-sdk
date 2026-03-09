@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
@@ -18,6 +19,13 @@ func New(client *sdk.Client) *Service {
 
 type Service struct {
 	client *sdk.Client
+}
+
+func apiPrefix(anonymous bool) string {
+	if anonymous {
+		return "/anonymous-api"
+	}
+	return "/api"
 }
 
 // --- User Profile ---
@@ -38,7 +46,18 @@ func (s *Service) UpdateProfile(ctx context.Context, body UpdateProfileRequest) 
 
 // SearchUser searches for users.
 func (s *Service) SearchUser(ctx context.Context, params SearchUserParams) ([]*UserSearchResult, error) {
-	query := map[string]string{}
+	return s.SearchUsersWithPrefix(ctx, false, searchUserQuery(params))
+}
+
+// SearchUsersWithPrefix searches users through either /api or /anonymous-api.
+func (s *Service) SearchUsersWithPrefix(ctx context.Context, anonymous bool, params SearchUsersQuery) ([]*UserSearchResult, error) {
+	var result []*UserSearchResult
+	_, err := s.client.Get(ctx, addQueryParams(apiPrefix(anonymous)+"/user/search", map[string]string(params)), &result)
+	return result, err
+}
+
+func searchUserQuery(params SearchUserParams) SearchUsersQuery {
+	query := SearchUsersQuery{}
 	if params.Keywords != "" {
 		query["keywords"] = params.Keywords
 	}
@@ -51,15 +70,21 @@ func (s *Service) SearchUser(ctx context.Context, params SearchUserParams) ([]*U
 	if params.DepartmentID != nil {
 		query["department_id"] = fmt.Sprintf("%d", *params.DepartmentID)
 	}
-	var result []*UserSearchResult
-	_, err := s.client.Get(ctx, addQueryParams("/api/user/search", query), &result)
-	return result, err
+	return query
 }
 
 // GetUserByID returns a user by their ID.
 func (s *Service) GetUserByID(ctx context.Context, userID int) (*UserProfile, error) {
 	u := fmt.Sprintf("/api/users/%d", userID)
 	result := new(UserProfile)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetUserEsignInfo returns frontend e-sign info for a specific user.
+func (s *Service) GetUserEsignInfo(ctx context.Context, userID int) (*UserEsignInfoResponse, error) {
+	u := fmt.Sprintf("/api/users/%d/esign-info", userID)
+	result := new(UserEsignInfoResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
@@ -514,6 +539,16 @@ func (s *Service) GetNotebook(ctx context.Context, notebookID int) (json.RawMess
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
+}
+
+// StartNotebookGrading starts the notebook grading SSE stream.
+func (s *Service) StartNotebookGrading(ctx context.Context, notebookID int, body NotebookGradingRequest) (*http.Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodPost, fmt.Sprintf("/api/notebooks/%d/grading", notebookID), body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	return s.client.HTTPClient().Do(req)
 }
 
 // --- Sign In ---

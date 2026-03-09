@@ -2,6 +2,7 @@ package aircredit
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -130,5 +131,132 @@ func TestTypedCreditStateHelpersUseFrontendModels(t *testing.T) {
 	audits, err := service.ListAuditsTyped(ctx, ListAuditsParams{Page: 1, PageSize: 5, Conditions: map[string]any{"status": "waiting"}})
 	if err != nil || len(audits.Items) != 1 || audits.Items[0].Course == nil || audits.Items[0].TargetType != "course" {
 		t.Fatalf("unexpected audits response: %#v, err=%v", audits, err)
+	}
+}
+
+func TestLessonPlanSSEHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		if got := r.Header.Get("Accept"); got != "text/event-stream" {
+			t.Fatalf("unexpected accept header: %q", got)
+		}
+		var body LessonPlanStreamRequest
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode lesson plan body: %v", err)
+		}
+		if body["courseware_id"] != float64(9) || body["stream"] != true {
+			t.Fatalf("unexpected lesson plan body: %#v", body)
+		}
+		switch r.URL.Path {
+		case "/api/courses/21/lesson-plan/generate", "/api/courses/21/lesson-plan/optimize":
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = w.Write([]byte("data: {\"errors\":[]}\n\n"))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	body := LessonPlanStreamRequest{"courseware_id": 9, "stream": true}
+
+	resp, err := service.StartLessonPlanGenerate(context.Background(), 21, body)
+	if err != nil {
+		t.Fatalf("StartLessonPlanGenerate returned error: %v", err)
+	}
+	_ = resp.Body.Close()
+
+	resp, err = service.StartLessonPlanOptimize(context.Background(), 21, body)
+	if err != nil {
+		t.Fatalf("StartLessonPlanOptimize returned error: %v", err)
+	}
+	_ = resp.Body.Close()
+}
+
+func TestCourseAndUserTokenHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/air-credit/course":
+			if got := r.URL.Query().Get("course_id"); got != "21" {
+				t.Fatalf("unexpected course_id query: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"credits":12}`))
+		case "/api/air-credit/user/token":
+			if got := r.URL.Query().Get("module_id"); got != "9" {
+				t.Fatalf("unexpected module_id query: %q", got)
+			}
+			if got := r.URL.Query().Get("module_type"); got != "lesson" {
+				t.Fatalf("unexpected module_type query: %q", got)
+			}
+			if got := r.URL.Query().Get("resource_name"); got != "Week 1" {
+				t.Fatalf("unexpected resource_name query: %q", got)
+			}
+			if got := r.URL.Query().Get("upload_id"); got != "32" {
+				t.Fatalf("unexpected upload_id query: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"token":"user-token"}`))
+		case "/api/air-credit/course/21/token":
+			_, _ = w.Write([]byte(`{"token":"course-token"}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	info, err := service.GetCourseCreditInfo(ctx, 21)
+	if err != nil || string(info) != `{"credits":12}` {
+		t.Fatalf("unexpected course credit info: %s, err=%v", string(info), err)
+	}
+
+	userToken, err := service.GetUserTokenWithParams(ctx, UserTokenParams{
+		ModuleID:     9,
+		ModuleType:   "lesson",
+		ResourceName: "Week 1",
+		UploadID:     32,
+	})
+	if err != nil || string(userToken) != `{"token":"user-token"}` {
+		t.Fatalf("unexpected user token: %s, err=%v", string(userToken), err)
+	}
+
+	courseToken, err := service.GetCourseToken(ctx, 21)
+	if err != nil || string(courseToken) != `{"token":"course-token"}` {
+		t.Fatalf("unexpected course token: %s, err=%v", string(courseToken), err)
+	}
+}
+
+func TestExportLessonPlanUsesFrontendBlobEndpoint(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/api/courses/21/lesson-plan/export" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		var body ExportLessonPlanRequest
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode export lesson plan body: %v", err)
+		}
+		chapters, ok := body.Chapters.([]any)
+		if !ok || len(chapters) != 2 || body.TemplateID != 6 {
+			t.Fatalf("unexpected export lesson plan body: %#v", body)
+		}
+		w.Header().Set("Content-Type", "application/octet-stream")
+		_, _ = w.Write([]byte("lesson-plan-docx"))
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	data, err := service.ExportLessonPlan(context.Background(), 21, ExportLessonPlanRequest{
+		Chapters:   []int{1, 2},
+		TemplateID: 6,
+	})
+	if err != nil || string(data) != "lesson-plan-docx" {
+		t.Fatalf("unexpected exported lesson plan: %q, err=%v", string(data), err)
 	}
 }

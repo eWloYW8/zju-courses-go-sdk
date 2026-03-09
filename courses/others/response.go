@@ -1,6 +1,10 @@
 package others
 
-import "github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+import (
+	"encoding/json"
+
+	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
+)
 
 type ProjectsResponse struct {
 	Items []*Project `json:"items"`
@@ -9,6 +13,16 @@ type ProjectsResponse struct {
 
 type ProjectApplicationsResponse struct {
 	Items []*ProjectApplication `json:"items"`
+	model.Pagination
+}
+
+type EntriesResponse struct {
+	Items []*Entry `json:"items"`
+	model.Pagination
+}
+
+type EntryReferencesResponse struct {
+	Items []json.RawMessage `json:"items"`
 	model.Pagination
 }
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/activities"
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
@@ -232,6 +233,14 @@ func (s *Service) ListAllSections(ctx context.Context, courseID int) (*SectionsR
 	return result, err
 }
 
+// ListEntryRefers returns course-scoped entry references used by the rich-text editor.
+func (s *Service) ListEntryRefers(ctx context.Context, courseID int) (*EntryRefersResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/entry-refers", courseID)
+	result := new(EntryRefersResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // ListScoreItemGroups returns score item groups for a course.
 func (s *Service) ListScoreItemGroups(ctx context.Context, courseID int, withoutScoreItem bool) (*ScoreItemGroupsResponse, error) {
 	u := fmt.Sprintf("/api/courses/%d/score-item-groups", courseID)
@@ -328,6 +337,30 @@ func (s *Service) ListLiveRecords(ctx context.Context, courseID int) (*LiveRecor
 	return result, err
 }
 
+// CreateLiveRecordAsrTask starts an ASR task for a live record.
+func (s *Service) CreateLiveRecordAsrTask(ctx context.Context, liveRecordID int) (LiveRecordAsrTaskResponse, error) {
+	u := fmt.Sprintf("/api/live-records/%d/task/asr", liveRecordID)
+	result := make(LiveRecordAsrTaskResponse)
+	_, err := s.client.Post(ctx, u, nil, &result)
+	return result, err
+}
+
+// GetLiveRecordAsrTaskStatus returns ASR task status with the frontend no-intercept query.
+func (s *Service) GetLiveRecordAsrTaskStatus(ctx context.Context, liveRecordID int) (LiveRecordAsrTaskStatusResponse, error) {
+	u := fmt.Sprintf("/api/live-records/%d/task/asr?no-intercept=true", liveRecordID)
+	result := make(LiveRecordAsrTaskStatusResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetLiveRecordCaptions returns captions for a live record.
+func (s *Service) GetLiveRecordCaptions(ctx context.Context, liveRecordID int) (LiveRecordCaptionsResponse, error) {
+	u := fmt.Sprintf("/api/live-records/%d/caption", liveRecordID)
+	result := make(LiveRecordCaptionsResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // GetCompleteness returns the user's course completion status.
 func (s *Service) GetCompleteness(ctx context.Context, courseID int) (*CompletenessResponse, error) {
 	u := fmt.Sprintf("/api/course/%d/my-completeness", courseID)
@@ -344,12 +377,17 @@ func (s *Service) GetActivityReadsForUser(ctx context.Context, courseID int) ([]
 	return result.ActivityReads, err
 }
 
-// GetEntryRecord returns the course entry record.
-func (s *Service) GetEntryRecord(ctx context.Context, courseID int) (json.RawMessage, error) {
+// RecordEntry posts the course entry record used by the frontend route tracker.
+func (s *Service) RecordEntry(ctx context.Context, courseID int) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/course/%d/entry/record", courseID)
 	var result json.RawMessage
-	_, err := s.client.Get(ctx, u, &result)
+	_, err := s.client.Post(ctx, u, nil, &result)
 	return result, err
+}
+
+// GetEntryRecord is kept for compatibility and uses the frontend POST endpoint.
+func (s *Service) GetEntryRecord(ctx context.Context, courseID int) (json.RawMessage, error) {
+	return s.RecordEntry(ctx, courseID)
 }
 
 // GetOnlineVideoCompletenessSetting returns the online video completeness setting.
@@ -460,6 +498,143 @@ func (s *Service) GetScorePercentages(ctx context.Context, courseID int) (*Score
 	return result, err
 }
 
+// GetHomeworkSubmissionNumber returns the aggregated homework submission number payload for a course.
+func (s *Service) GetHomeworkSubmissionNumber(ctx context.Context, courseID int) (*HomeworkSubmissionNumberResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/homework-submission-number", courseID)
+	result := new(HomeworkSubmissionNumberResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetClassroomExamScores returns classroom score data for a course.
+func (s *Service) GetClassroomExamScores(ctx context.Context, courseID int) (*ClassroomExamScoresResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/classroom-exam-scores", courseID)
+	result := new(ClassroomExamScoresResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListExamSubmissions returns exam-submissions data for a course.
+func (s *Service) ListExamSubmissions(ctx context.Context, courseID int) (*CourseExamSubmissionsResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/exam-submissions", courseID)
+	result := new(CourseExamSubmissionsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// CreateSHTVUGroups creates SHTVU groups for a course.
+func (s *Service) CreateSHTVUGroups(ctx context.Context, courseID int) (*SHTVUGroupsResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/create-groups", courseID)
+	result := new(SHTVUGroupsResponse)
+	_, err := s.client.Post(ctx, u, nil, result)
+	return result, err
+}
+
+// ListCatalogActivities returns catalog activities for a course.
+func (s *Service) ListCatalogActivities(ctx context.Context, courseID int) (*CatalogActivitiesResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/catalog-activities", courseID)
+	result := new(CatalogActivitiesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListCatalogActivitiesAnonymous returns visitor catalog activities for a course.
+func (s *Service) ListCatalogActivitiesAnonymous(ctx context.Context, courseID int) (*CatalogActivitiesResponse, error) {
+	u := fmt.Sprintf("/anonymous-api/courses/%d/catalog-activities", courseID)
+	result := new(CatalogActivitiesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListQuestionnaires returns questionnaires for a course.
+func (s *Service) ListQuestionnaires(ctx context.Context, courseID int) (*CourseQuestionnairesResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/questionnaires", courseID)
+	result := new(CourseQuestionnairesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListQuestionnairesWithParams returns questionnaire-list data for a course.
+func (s *Service) ListQuestionnairesWithParams(ctx context.Context, courseID int, params *ListQuestionnairesParams) (*QuestionnaireListResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/questionnaire-list", courseID)
+	query := map[string]string{}
+	if params != nil {
+		if params.Page > 0 {
+			query["page"] = strconv.Itoa(params.Page)
+		}
+		if params.PageSize > 0 {
+			query["page_size"] = strconv.Itoa(params.PageSize)
+		}
+		if params.Conditions != nil {
+			body, err := json.Marshal(params.Conditions)
+			if err != nil {
+				return nil, err
+			}
+			query["conditions"] = string(body)
+		}
+	}
+	u = addQueryParams(u, query)
+	result := new(QuestionnaireListResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetQuestionnaireScores returns questionnaire scores for a course.
+func (s *Service) GetQuestionnaireScores(ctx context.Context, courseID int) (*QuestionnaireScoresResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/questionnaire-scores", courseID)
+	result := new(QuestionnaireScoresResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetCourseWebLinkScores returns course-level web-link scores.
+func (s *Service) GetCourseWebLinkScores(ctx context.Context, courseID int) (*CourseWebLinkScoresResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/web-link-scores", courseID)
+	result := new(CourseWebLinkScoresResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetCourseVirtualExperimentScores returns course-level virtual-experiment scores.
+func (s *Service) GetCourseVirtualExperimentScores(ctx context.Context, courseID int) (*CourseVirtualExperimentScoresResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/virtual-experiment-scores", courseID)
+	result := new(CourseVirtualExperimentScoresResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListCourseVirtualExperiments returns virtual-experiment activities for a course.
+func (s *Service) ListCourseVirtualExperiments(ctx context.Context, courseID int) (*CourseVirtualExperimentsResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/virtual-experiments", courseID)
+	result := new(CourseVirtualExperimentsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListAllActivitiesByModuleIDs returns all activities for selected modules using the frontend query shape.
+func (s *Service) ListAllActivitiesByModuleIDs(ctx context.Context, courseID int, params *ListAllActivitiesByModuleIDsParams) (*AllActivitiesResponse, error) {
+	query := map[string]string{}
+	if params != nil {
+		if len(params.ModuleIDs) > 0 {
+			ids := make([]string, 0, len(params.ModuleIDs))
+			for _, id := range params.ModuleIDs {
+				ids = append(ids, strconv.Itoa(id))
+			}
+			query["module_ids"] = "[" + strings.Join(ids, ",") + "]"
+		}
+		if params.ActivityTypes != "" {
+			query["activity_types"] = params.ActivityTypes
+		}
+		if params.DisableLoadingAnimation {
+			query["no-loading-animation"] = "true"
+		}
+	}
+	u := addQueryParams(fmt.Sprintf("/api/courses/%d/all-activities", courseID), query)
+	result := new(AllActivitiesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // UpdateCourseAdvanceSetting updates course advance settings used by the score-percentage UI.
 func (s *Service) UpdateCourseAdvanceSetting(ctx context.Context, courseID int, body *CourseAdvanceSettingRequest) error {
 	u := fmt.Sprintf("/api/course/%d/course-advance-setting", courseID)
@@ -499,6 +674,129 @@ func (s *Service) GetPerformanceScore(ctx context.Context, courseID int, isOrigi
 	return result, err
 }
 
+// GetAnnounceScoreSettings returns the frontend announce-score-settings payload.
+func (s *Service) GetAnnounceScoreSettings(ctx context.Context, courseID int) (*AnnounceScoreSettingsResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/announce-score-settings", courseID)
+	result := new(AnnounceScoreSettingsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateAnnounceScoreSettings updates the frontend announce-score-settings payload.
+func (s *Service) UpdateAnnounceScoreSettings(ctx context.Context, courseID int, body interface{}) error {
+	u := fmt.Sprintf("/api/courses/%d/announce-score-settings", courseID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// GetPerformanceScorePercentage returns performance score percentage settings for a course.
+func (s *Service) GetPerformanceScorePercentage(ctx context.Context, courseID int) (*PerformanceScorePercentageResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/performance/score-percentage", courseID)
+	result := new(PerformanceScorePercentageResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListWarnings returns the warning list payload for a course.
+func (s *Service) ListWarnings(ctx context.Context, courseID int, fields string) (*WarningListResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/warnings", courseID)
+	if fields != "" {
+		u = addQueryParams(u, map[string]string{"fields": fields})
+	}
+	result := new(WarningListResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetWarning returns a specific warning payload.
+func (s *Service) GetWarning(ctx context.Context, courseID, warningID int) (*WarningResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/warnings/%d", courseID, warningID)
+	result := new(WarningResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetWarningThreshold returns the warning threshold payload.
+func (s *Service) GetWarningThreshold(ctx context.Context, courseID, warningID int) (*WarningThresholdResponse, error) {
+	u := fmt.Sprintf("/api/course/%d/warnings/%d/threshold", courseID, warningID)
+	result := new(WarningThresholdResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// CreateWarningThreshold creates a warning threshold configuration.
+func (s *Service) CreateWarningThreshold(ctx context.Context, courseID, warningID int, body interface{}) error {
+	u := fmt.Sprintf("/api/course/%d/warnings/%d/threshold", courseID, warningID)
+	_, err := s.client.Post(ctx, u, body, nil)
+	return err
+}
+
+// UpdateWarningThreshold updates a warning threshold configuration.
+func (s *Service) UpdateWarningThreshold(ctx context.Context, courseID, warningID int, body interface{}) error {
+	u := fmt.Sprintf("/api/course/%d/warnings/%d/threshold", courseID, warningID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// ListWarningStudents returns the warning student list payload.
+func (s *Service) ListWarningStudents(ctx context.Context, courseID, warningID int, params *WarningStudentsParams) (*WarningStudentsResponse, error) {
+	query := map[string]string{}
+	if params != nil {
+		if params.Fields != "" {
+			query["fields"] = params.Fields
+		}
+		if params.Conditions != nil {
+			body, err := json.Marshal(params.Conditions)
+			if err != nil {
+				return nil, err
+			}
+			query["conditions"] = string(body)
+		}
+	}
+	u := addQueryParams(fmt.Sprintf("/api/course/%d/warnings/%d/students", courseID, warningID), query)
+	result := new(WarningStudentsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// UpdateWarningStudentComment updates a warning-student comment.
+func (s *Service) UpdateWarningStudentComment(ctx context.Context, warningStudentID int, body interface{}) error {
+	u := fmt.Sprintf("/api/warning/student/%d/comment", warningStudentID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// DeleteWarningStudent removes a student from a warning scope.
+func (s *Service) DeleteWarningStudent(ctx context.Context, courseID, warningStudentID int) error {
+	u := fmt.Sprintf("/api/course/%d/warning-students/%d", courseID, warningStudentID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// GetScoreRanks returns score-ranks data for a course.
+func (s *Service) GetScoreRanks(ctx context.Context, courseID int) (*ScoreRanksResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/score-ranks", courseID)
+	result := new(ScoreRanksResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetScoreItemSettings returns score-item-settings data for a course.
+func (s *Service) GetScoreItemSettings(ctx context.Context, courseID int) (*ScoreItemSettingsResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/score-item-settings", courseID)
+	result := new(ScoreItemSettingsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetEnrollmentRawScore returns raw enrollment score data for a course.
+func (s *Service) GetEnrollmentRawScore(ctx context.Context, courseID int) (*EnrollmentRawScoreResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/enrollment-raw-score", courseID)
+	result := new(EnrollmentRawScoreResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // GetScoreDistribution returns the frontend score-distribution payload.
 func (s *Service) GetScoreDistribution(ctx context.Context, courseID int) (*ScoreDistributionResponse, error) {
 	u := fmt.Sprintf("/api/course/%d/score-distribution?no-intercept=true", courseID)
@@ -511,6 +809,14 @@ func (s *Service) GetScoreDistribution(ctx context.Context, courseID int) (*Scor
 func (s *Service) GetScoreTypeSettings(ctx context.Context, courseID int) (*ScoreTypeSettingsResponse, error) {
 	u := fmt.Sprintf("/api/courses/%d/score-type-settings", courseID)
 	result := new(ScoreTypeSettingsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetCourseScoreType returns the score type for a specific course activity category.
+func (s *Service) GetCourseScoreType(ctx context.Context, courseID int, activityType string) (*CourseScoreTypeResponse, error) {
+	u := fmt.Sprintf("/api/courses/%d/%s/score-type", courseID, url.PathEscape(activityType))
+	result := new(CourseScoreTypeResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
 }
@@ -622,6 +928,16 @@ func (s *Service) AddEnrollments(ctx context.Context, courseID int, body interfa
 	return result, err
 }
 
+// GetCombineCourseActivityReadSubCourseIDs returns the sub-course IDs that already contain read/submission data for the activity.
+func (s *Service) GetCombineCourseActivityReadSubCourseIDs(ctx context.Context, courseID, activityID int) ([]int, error) {
+	u := addQueryParams(fmt.Sprintf("/api/combine-courses/%d/activity-read-sub-course-ids", courseID), map[string]string{
+		"activity_id": strconv.Itoa(activityID),
+	})
+	var result []int
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
 // UpdateEnrollment updates a single course enrollment.
 func (s *Service) UpdateEnrollment(ctx context.Context, enrollmentID int, body interface{}) error {
 	u := fmt.Sprintf("/api/course/enrollments/%d", enrollmentID)
@@ -721,6 +1037,14 @@ func (s *Service) GetBlueprintSubItemsCount(ctx context.Context, courseID int, a
 	return result, err
 }
 
+// GetBlueprintAllSubActivitiesCount returns the aggregated sub-activity count for a blueprint course.
+func (s *Service) GetBlueprintAllSubActivitiesCount(ctx context.Context, courseID int) (*BlueprintAllSubActivitiesCountResponse, error) {
+	u := fmt.Sprintf("/api/blueprint/%d/all-sub-activities-count", courseID)
+	result := new(BlueprintAllSubActivitiesCountResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
 // SyncBlueprint syncs blueprint content to target courses.
 func (s *Service) SyncBlueprint(ctx context.Context, courseID int, body interface{}) (json.RawMessage, error) {
 	u := fmt.Sprintf("/api/blueprint/%d/sync", courseID)
@@ -739,10 +1063,59 @@ func (s *Service) PublishActivities(ctx context.Context, courseID int, body Publ
 
 // ListBlueprintSubCourses returns blueprint sub courses.
 func (s *Service) ListBlueprintSubCourses(ctx context.Context, courseID int) (json.RawMessage, error) {
-	u := fmt.Sprintf("/api/blueprint/sub-courses/%d", courseID)
+	u := fmt.Sprintf("/api/blueprint/%d/sub-courses", courseID)
 	var result json.RawMessage
 	_, err := s.client.Get(ctx, u, &result)
 	return result, err
+}
+
+// ListBlueprintSubCoursesWithParams returns blueprint sub courses using the frontend query shape.
+func (s *Service) ListBlueprintSubCoursesWithParams(ctx context.Context, courseID int, params *ListBlueprintSubCoursesParams) (*BlueprintSubCoursesResponse, error) {
+	query := map[string]string{}
+	if params != nil {
+		if params.Keyword != "" {
+			query["keyword"] = params.Keyword
+		}
+		if params.SourceID > 0 {
+			query["source_id"] = strconv.Itoa(params.SourceID)
+		}
+		if params.SourceType != "" {
+			query["source_type"] = params.SourceType
+		}
+	}
+	u := addQueryParams(fmt.Sprintf("/api/blueprint/%d/sub-courses", courseID), query)
+	result := new(BlueprintSubCoursesResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// BindBlueprintSubCourses binds sub-courses to a blueprint course.
+func (s *Service) BindBlueprintSubCourses(ctx context.Context, courseID int, body *BindBlueprintSubCoursesRequest) error {
+	u := fmt.Sprintf("/api/blueprint/%d/sub-courses", courseID)
+	_, err := s.client.Post(ctx, u, body, nil)
+	return err
+}
+
+// CheckBlueprintPrerequisites checks whether sources have prerequisites before blueprint sync.
+func (s *Service) CheckBlueprintPrerequisites(ctx context.Context, courseID int, body *CheckBlueprintPrerequisitesRequest) (*BlueprintCheckPrerequisitesResponse, error) {
+	u := fmt.Sprintf("/api/blueprint/%d/check-prerequisites", courseID)
+	result := new(BlueprintCheckPrerequisitesResponse)
+	_, err := s.client.Post(ctx, u, body, result)
+	return result, err
+}
+
+// DeleteBlueprintSubCourse removes a bound sub-course from a blueprint course.
+func (s *Service) DeleteBlueprintSubCourse(ctx context.Context, courseID, subCourseID int) error {
+	u := fmt.Sprintf("/api/blueprint/%d/sub-courses/%d", courseID, subCourseID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// RenameBlueprintSubCourse updates the frontend-visible name for a blueprint sub-course.
+func (s *Service) RenameBlueprintSubCourse(ctx context.Context, subCourseID int, body *RenameBlueprintSubCourseRequest) error {
+	u := fmt.Sprintf("/api/blueprint/sub-courses/%d/name", subCourseID)
+	_, err := s.client.Post(ctx, u, body, nil)
+	return err
 }
 
 // DeleteBlueprint deletes a blueprint course mapping/configuration.

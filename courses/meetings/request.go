@@ -1,5 +1,18 @@
 package meetings
 
+type ListVTRSResourcesStatParams struct {
+	DateRange string
+}
+
+type ListVTRSMeetingsParams struct {
+	Page             int
+	PageSize         int
+	Keyword          string
+	Status           string
+	ClassificationID *int
+	MeetingFormat    string
+}
+
 type ListVTRSesParams struct {
 	Conditions string
 	NeedStat   *bool
@@ -53,6 +66,19 @@ type ListVTRSSubjectLibsParams struct {
 	LibType          string
 }
 
+type ListVTRSMembersParams struct {
+	Keyword  string
+	Page     int
+	PageSize int
+	Fields   string
+}
+
+type SelectVTRSMembersParams struct {
+	Page       int
+	PageSize   int
+	Conditions any
+}
+
 type CreateVTRSMeetingClassificationRequest struct {
 	Name     string `json:"name,omitempty"`
 	Category string `json:"category,omitempty"`
@@ -80,4 +106,28 @@ type UpdateVTRSResourceClassificationRequest struct {
 
 type SortVTRSResourceClassificationsRequest struct {
 	Classifications []int `json:"classifications,omitempty"`
+}
+
+type CreateVTRSResourceFolderRequest struct {
+	Name             string `json:"name,omitempty"`
+	ParentFolderID   *int   `json:"parent_folder_id,omitempty"`
+	ClassificationID *int   `json:"classification_id,omitempty"`
+}
+
+type MoveVTRSResourcesRequest struct {
+	UploadReferenceIDs []int `json:"upload_reference_ids,omitempty"`
+	ParentFolderID     *int  `json:"parent_folder_id,omitempty"`
+	ClassificationID   *int  `json:"classification_id,omitempty"`
+}
+
+type UpdateVTRSResourceRequest struct {
+	Name string `json:"name,omitempty"`
+}
+
+type TransferVTRSOwnerRequest struct {
+	OwnerID int `json:"owner_id"`
+}
+
+type UserIDsRequest struct {
+	UserIDs []int `json:"user_ids,omitempty"`
 }

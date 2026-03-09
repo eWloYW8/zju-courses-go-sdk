@@ -37,3 +37,14 @@ type MoodlePackagesResponse struct {
 	Items []*MoodlePackage `json:"items"`
 	model.Pagination
 }
+
+type DuplicateReportDownloadInfo struct {
+	Status      string `json:"status,omitempty"`
+	DownloadURL string `json:"download_url,omitempty"`
+}
+
+type H5CoursewareValidateResponse struct {
+	EnableSetH5CoursewareCompletion bool `json:"enable_set_h5_courseware_completion,omitempty"`
+}
+
+type StartEsignResponse map[string]any

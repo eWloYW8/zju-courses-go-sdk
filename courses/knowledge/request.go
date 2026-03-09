@@ -58,3 +58,17 @@ type ImportKnowledgeNodesByCourseRequest struct {
 type AIParseKnowledgeNodesRequest struct {
 	UploadID int `json:"upload_id"`
 }
+
+type ListKnowledgeBaseResourcesParams struct {
+	Page       int
+	PageSize   int
+	Conditions any
+}
+
+type RemoveKnowledgeBaseResourceRequest struct {
+	ResourceID int `json:"resource_id"`
+}
+
+type RetryKnowledgeBaseResourceRequest struct {
+	ResourceIDs []int `json:"resource_ids"`
+}

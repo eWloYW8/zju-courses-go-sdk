@@ -203,3 +203,112 @@ func TestProjectHelpersUseFrontendEndpointsAndModels(t *testing.T) {
 		t.Fatalf("DeleteProjectSharedResource returned error: %v", err)
 	}
 }
+
+func TestEntryAndLessonHelpersUseFrontendEndpointsAndModels(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/entries":
+			if got := r.URL.Query().Get("page"); got != "2" {
+				t.Fatalf("unexpected entries page: %q", got)
+			}
+			if got := r.URL.Query().Get("page_size"); got != "20" {
+				t.Fatalf("unexpected entries page_size: %q", got)
+			}
+			if got := r.URL.Query().Get("fields"); got != "id,org_id,name,created_at,updated_at,created_by_id,updated_by_id,reference_count" {
+				t.Fatalf("unexpected entries fields: %q", got)
+			}
+			if got := r.URL.Query().Get("conditions"); got != `{"keyword":"matrix"}` {
+				t.Fatalf("unexpected entries conditions: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"items":[{"id":7,"org_id":2,"name":"矩阵","created_at":"2026-03-01","updated_at":"2026-03-02","created_by_id":5,"updated_by_id":6,"reference_count":3}],"page":2,"page_size":20,"pages":1,"total":1}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/entries/7":
+			if got := r.URL.Query().Get("fields"); got != "id,org_id,name,definition,uploads,keywords,created_at,updated_at,created_by_id,updated_by_id,reference_count" {
+				t.Fatalf("unexpected entry fields: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"id":7,"org_id":2,"name":"矩阵","definition":"线性代数","uploads":[{"id":9,"name":"matrix.pdf"}],"keywords":[{"id":3,"name":"线代"}],"created_at":"2026-03-01","updated_at":"2026-03-02","created_by_id":5,"updated_by_id":6,"reference_count":3}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/entries/7/references":
+			if got := r.URL.Query().Get("page"); got != "1" {
+				t.Fatalf("unexpected references page: %q", got)
+			}
+			if got := r.URL.Query().Get("page_size"); got != "10" {
+				t.Fatalf("unexpected references page_size: %q", got)
+			}
+			_, _ = w.Write([]byte(`{"items":[{"id":11}],"page":1,"page_size":10,"pages":1,"total":1}`))
+		case r.Method == http.MethodPut && r.URL.Path == "/api/entries/7":
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode update entry body: %v", err)
+			}
+			if body["name"] != "矩阵论" {
+				t.Fatalf("unexpected update entry body: %#v", body)
+			}
+			_, _ = w.Write([]byte(`{"id":7,"name":"矩阵论"}`))
+		case r.Method == http.MethodDelete && r.URL.Path == "/api/entries/7":
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodDelete && r.URL.Path == "/api/entries/batch-delete":
+			var body map[string][]int
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode batch-delete body: %v", err)
+			}
+			if len(body["entry_ids"]) != 2 || body["entry_ids"][0] != 7 {
+				t.Fatalf("unexpected batch-delete body: %#v", body)
+			}
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodGet && r.URL.Path == "/api/orgs/25/download-capture":
+			_, _ = w.Write([]byte(`{"enabled":true}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/room-locations":
+			_, _ = w.Write([]byte(`{"rooms":[{"id":1,"building":"紫金港","room_name":"东1A","room_code":"A101","seats":120}]}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	entries, err := service.ListEntriesWithParams(ctx, ListEntriesParams{
+		Page:       2,
+		PageSize:   20,
+		Conditions: map[string]any{"keyword": "matrix"},
+	})
+	if err != nil || len(entries.Items) != 1 || entries.Items[0].ReferenceCount != 3 {
+		t.Fatalf("unexpected entries response: %#v, err=%v", entries, err)
+	}
+
+	entry, err := service.GetEntryTyped(ctx, 7)
+	if err != nil || len(entry.Uploads) != 1 || len(entry.Keywords) != 1 || entry.Keywords[0].Name != "线代" {
+		t.Fatalf("unexpected entry detail: %#v, err=%v", entry, err)
+	}
+
+	refs, err := service.ListEntryReferences(ctx, 7, ListEntryReferencesParams{Page: 1, PageSize: 10})
+	if err != nil || len(refs.Items) != 1 {
+		t.Fatalf("unexpected entry references: %#v, err=%v", refs, err)
+	}
+
+	updated, err := service.UpdateEntry(ctx, 7, map[string]any{"name": "矩阵论"})
+	if err != nil || updated.Name != "矩阵论" {
+		t.Fatalf("unexpected updated entry: %#v, err=%v", updated, err)
+	}
+
+	if err := service.DeleteEntry(ctx, 7); err != nil {
+		t.Fatalf("DeleteEntry returned error: %v", err)
+	}
+
+	if err := service.BatchDeleteEntries(ctx, map[string]any{"entry_ids": []int{7, 8}}); err != nil {
+		t.Fatalf("BatchDeleteEntries returned error: %v", err)
+	}
+
+	if enabled, err := service.GetOrgDownloadCapture(ctx, 25); err != nil || !enabled.Enabled {
+		t.Fatalf("unexpected org download-capture response: %#v, err=%v", enabled, err)
+	}
+
+	if rooms, err := service.ListRoomLocations(ctx, 14); err != nil || len(rooms.Rooms) != 1 || rooms.Rooms[0].RoomCode != "A101" {
+		t.Fatalf("unexpected room locations: %#v, err=%v", rooms, err)
+	}
+
+	if rooms, err := service.ListGlobalRoomLocations(ctx); err != nil || len(rooms.Rooms) != 1 || rooms.Rooms[0].Building != "紫金港" {
+		t.Fatalf("unexpected global room locations: %#v, err=%v", rooms, err)
+	}
+}

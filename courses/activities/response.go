@@ -60,6 +60,20 @@ type CommentPageStat struct {
 
 type ExamActivityReadLogResponse map[string]any
 
+type ActivityReadLogResponse map[string]any
+
+type ActivitySubmissionNumberResponse map[string]any
+
+type ActivityReviewStateResponse map[string]any
+
+type HomeworkFirstSubmissionTimeResponse map[string]any
+
+type ActivityUploadsLicenseInfoResponse map[string]any
+
+type OnlineVideoActivityReadCountResponse map[string]any
+
+type ActivityScoresResponse map[string]any
+
 type ConvertedInteractionResponse struct {
 	ID int `json:"id"`
 }

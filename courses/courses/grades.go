@@ -17,7 +17,7 @@ func (s *Service) ListHomeworkScores(ctx context.Context, courseID int) (*Homewo
 
 // GetHomeworkSubmissionStatus returns homework submission statuses for a course.
 func (s *Service) GetHomeworkSubmissionStatus(ctx context.Context, courseID int) (*HomeworkSubmissionStatusResponse, error) {
-	u := fmt.Sprintf("/api/course/%d/homework/submission-status", courseID)
+	u := fmt.Sprintf("/api/course/%d/homework/submission-status?no-intercept=true", courseID)
 	result := new(HomeworkSubmissionStatusResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err
@@ -25,7 +25,7 @@ func (s *Service) GetHomeworkSubmissionStatus(ctx context.Context, courseID int)
 
 // ListExamScores returns exam scores for a course.
 func (s *Service) ListExamScores(ctx context.Context, courseID int) (*ExamScoresResponse, error) {
-	u := fmt.Sprintf("/api/courses/%d/exam-scores", courseID)
+	u := fmt.Sprintf("/api/courses/%d/exam-scores?no-intercept=true", courseID)
 	result := new(ExamScoresResponse)
 	_, err := s.client.Get(ctx, u, result)
 	return result, err

@@ -242,3 +242,196 @@ func TestHomeworkSubmissionHelpersUseFrontendEndpoints(t *testing.T) {
 		t.Fatalf("unexpected duplicate rates by submission: %#v, err=%v", duplicateRatesBySubmission, err)
 	}
 }
+
+func TestHomeworkDuplicateLibHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/api/course/9/homework/duplicate-lib":
+			var body AddDuplicateLibUploadsRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode duplicate-lib body: %v", err)
+			}
+			if len(body.UploadIDs) != 2 || body.UploadIDs[0] != 3 || body.UploadIDs[1] != 5 {
+				t.Fatalf("unexpected add duplicate-lib body: %#v", body)
+			}
+			_, _ = w.Write([]byte(`{}`))
+		case r.Method == http.MethodDelete && r.URL.Path == "/api/course/9/homework/duplicate-lib":
+			if got := r.URL.Query().Get("upload_ids"); got != "3,5" {
+				t.Fatalf("unexpected delete upload_ids query: %q", got)
+			}
+			_, _ = w.Write([]byte(`{}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/course/9/homework/duplicate-lib":
+			if got := r.URL.Query().Get("page"); got != "1" {
+				t.Fatalf("unexpected page query: %q", got)
+			}
+			if got := r.URL.Query().Get("page_size"); got != "10" {
+				t.Fatalf("unexpected page_size query: %q", got)
+			}
+			if got := r.URL.Query().Get("conditions"); got != `{"source":"manual_upload","type":"pdf"}` {
+				t.Fatalf("unexpected conditions query: %q", got)
+			}
+			_, _ = w.Write([]byte(`{
+				"page":1,
+				"page_size":10,
+				"pages":1,
+				"total":1,
+				"start":1,
+				"end":1,
+				"uploads":[{"id":7,"name":"sample.pdf","key":"abc","source":"manual_upload"}]
+			}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/homework/8/duplicate-detect/task":
+			if got := r.URL.Query().Get("status"); got != "success" {
+				t.Fatalf("unexpected status query: %q", got)
+			}
+			_, _ = w.Write([]byte(`{
+				"status":"success",
+				"created_at":"2026-03-09T10:00:00Z",
+				"input":{"config":{"in_platform":{"check_within_current_homework":true,"check_within_homework_library":true,"check_within_history_homework":false}}},
+				"output":{"13:file-a":[7,10]},
+				"task_items":[{"_id":"task-1","key_b":"file-b","doc_b_data":{"name":"other.pdf","meta":{"type":"duplicate_lib","source":["作业库"],"time":"2026-03-08T08:00:00Z"}},"result":[[[1,3]],[[4,6]]]}]
+			}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/duplicate-detect/file/file-a/raw":
+			_, _ = w.Write([]byte("raw duplicate text"))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/homework/8/duplicate-detect-result/file/file-a":
+			_, _ = w.Write([]byte(`{
+				"status":"success",
+				"created_at":"2026-03-09T10:00:00Z",
+				"task_items":[{"_id":"task-1","key_b":"file-b"}]
+			}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/duplicate-detect/report/download":
+			var body DuplicateDetectReportDownloadRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode report download body: %v", err)
+			}
+			if body.ReportType != "a" || body.DetectKey != "detect-1" || body.Provider != "cnki" {
+				t.Fatalf("unexpected report download body: %#v", body)
+			}
+			_, _ = w.Write([]byte(`{"status":"processing","download_url":"https://example.com/report.docx"}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	if err := service.AddUploadsToDuplicateLib(ctx, 9, &AddDuplicateLibUploadsRequest{UploadIDs: []int{3, 5}}); err != nil {
+		t.Fatalf("AddUploadsToDuplicateLib returned error: %v", err)
+	}
+
+	if err := service.DeleteUploadsFromDuplicateLib(ctx, 9, []int{3, 5}); err != nil {
+		t.Fatalf("DeleteUploadsFromDuplicateLib returned error: %v", err)
+	}
+
+	lib, err := service.ListDuplicateLibUploads(ctx, 9, ListDuplicateLibUploadsParams{
+		Conditions: map[string]any{"source": "manual_upload", "type": "pdf"},
+	})
+	if err != nil || len(lib.Uploads) != 1 || lib.Uploads[0].Name != "sample.pdf" {
+		t.Fatalf("unexpected duplicate-lib uploads: %#v, err=%v", lib, err)
+	}
+
+	task, err := service.GetLastDuplicateDetectTask(ctx, 8, "success")
+	if err != nil || task.Input == nil || task.Input.Config == nil || task.Input.Config.InPlatform == nil || !task.Input.Config.InPlatform.CheckWithinHomeworkLibrary {
+		t.Fatalf("unexpected duplicate-detect task: %#v, err=%v", task, err)
+	}
+
+	rawFile, err := service.GetDuplicateDetectRawFile(ctx, "file-a")
+	if err != nil || rawFile != "raw duplicate text" {
+		t.Fatalf("unexpected duplicate raw file: %q, err=%v", rawFile, err)
+	}
+
+	result, err := service.GetDuplicateDetectResult(ctx, 8, "file-a")
+	if err != nil || len(result.TaskItems) != 1 || result.TaskItems[0].KeyB != "file-b" {
+		t.Fatalf("unexpected duplicate-detect result: %#v, err=%v", result, err)
+	}
+
+	downloadInfo, err := service.RequestDuplicateDetectReportDownload(ctx, &DuplicateDetectReportDownloadRequest{
+		ReportType: "a",
+		DetectKey:  "detect-1",
+		Provider:   "cnki",
+	})
+	if err != nil || downloadInfo.Status != "processing" || downloadInfo.DownloadURL != "https://example.com/report.docx" {
+		t.Fatalf("unexpected report download info: %#v, err=%v", downloadInfo, err)
+	}
+}
+
+func TestStartHomeworkAIGenerateUsesFrontendSSEEndpoint(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/api/courses/21/homework/9/ai-generate" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if got := r.Header.Get("Accept"); got != "text/event-stream" {
+			t.Fatalf("unexpected accept header: %q", got)
+		}
+		var body HomeworkAIGenerateRequest
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode ai-generate body: %v", err)
+		}
+		if body.LearningGoals != "掌握递归" || len(body.BloomCognitiveDomains) != 2 || body.Locale != "auto" || body.Assignment != "<p>旧作业</p>" || body.Suggestion != "增加案例" {
+			t.Fatalf("unexpected ai-generate body: %#v", body)
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"data\":\"{}\"}\n\n"))
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	resp, err := service.StartHomeworkAIGenerate(context.Background(), 21, 9, &HomeworkAIGenerateRequest{
+		LearningGoals:         "掌握递归",
+		BloomCognitiveDomains: []string{"apply", "analyze"},
+		Locale:                "auto",
+		Assignment:            "<p>旧作业</p>",
+		Suggestion:            "增加案例",
+	})
+	if err != nil {
+		t.Fatalf("StartHomeworkAIGenerate returned error: %v", err)
+	}
+	_ = resp.Body.Close()
+}
+
+func TestSubmissionAnalysisHelpersUseFrontendEndpoints(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/submissions/10/homework/analysis/can-reanalyze":
+			_, _ = w.Write([]byte(`{"reanalysis":true,"last_analyzed_at":"2026-03-09T08:00:00Z"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/api/submissions/10/homework/analysis":
+			_, _ = w.Write([]byte(`{"content":"analysis-body"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/submissions/10/homework/analysis":
+			var body SubmissionAnalysisRequest
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode submission analysis body: %v", err)
+			}
+			if body.Content != "new-analysis" {
+				t.Fatalf("unexpected submission analysis body: %#v", body)
+			}
+			_, _ = w.Write([]byte(`{"content":"saved-analysis"}`))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	service := New(sdk.NewClient(sdk.WithBaseURL(server.URL)))
+	ctx := context.Background()
+
+	status, err := service.GetSubmissionAnalysisStatus(ctx, 10, "homework")
+	if err != nil || status["reanalysis"] != true {
+		t.Fatalf("unexpected submission analysis status: %#v, err=%v", status, err)
+	}
+
+	analysis, err := service.GetSubmissionAnalysis(ctx, 10, "homework")
+	if err != nil || analysis["content"] != "analysis-body" {
+		t.Fatalf("unexpected submission analysis: %#v, err=%v", analysis, err)
+	}
+
+	saved, err := service.SaveSubmissionAnalysis(ctx, 10, "homework", &SubmissionAnalysisRequest{Content: "new-analysis"})
+	if err != nil || saved["content"] != "saved-analysis" {
+		t.Fatalf("unexpected saved submission analysis: %#v, err=%v", saved, err)
+	}
+}

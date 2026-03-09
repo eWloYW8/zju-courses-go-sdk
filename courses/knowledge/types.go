@@ -298,6 +298,17 @@ type KnowledgeNodeStudentReferenceStat struct {
 	ActivityCount    int      `json:"activity_count,omitempty"`
 }
 
+type KnowledgeBase map[string]any
+
+type KnowledgeBaseResource map[string]any
+
+type KnowledgeBaseResourcesResponse struct {
+	Items []KnowledgeBaseResource `json:"items,omitempty"`
+	model.Pagination
+}
+
+type KnowledgeBaseMutationResponse map[string]any
+
 type KnowledgeNodeReferTypeStats struct {
 	NodeCount     int `json:"node_count,omitempty"`
 	ResourceCount int `json:"resource_ref_count,omitempty"`

@@ -52,3 +52,12 @@ type CreditAuditsResponse struct {
 	Items []*CreditAudit `json:"items"`
 	model.Pagination
 }
+
+type StreamError struct {
+	Code    string `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+type LessonPlanStreamResponse struct {
+	Errors []*StreamError `json:"errors,omitempty"`
+}

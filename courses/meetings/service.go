@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/eWloYW8/zju-courses-go-sdk/courses/model"
 	"github.com/eWloYW8/zju-courses-go-sdk/internal/sdk"
@@ -331,9 +332,40 @@ func (s *Service) ListVTRSResources(ctx context.Context, vtrsID int, params *Lis
 // GetVTRSResourcesSummary returns resource summary counts for a VTRS.
 func (s *Service) GetVTRSResourcesSummary(ctx context.Context, vtrsID int) (VTRSResourcesSummaryResponse, error) {
 	u := fmt.Sprintf("/api/vtrses/%d/resources/summary", vtrsID)
-	var result VTRSResourcesSummaryResponse
+	var result VTRSResourceSummary
 	_, err := s.client.Get(ctx, u, &result)
+	result.All = result.Materials + result.ExerciseLibs
 	return result, err
+}
+
+// GetVTRSResourcesStat returns typed VTRS resource statistics.
+func (s *Service) GetVTRSResourcesStat(ctx context.Context, vtrsID int, params *ListVTRSResourcesStatParams) (*VTRSResourceStat, error) {
+	query := map[string]string{}
+	if params != nil && params.DateRange != "" {
+		query["date_range"] = params.DateRange
+	}
+	u := addQueryParams(fmt.Sprintf("/api/stat/vtrses/%d/resources", vtrsID), query)
+	raw := map[string]int{}
+	_, err := s.client.Get(ctx, u, &raw)
+	if err != nil {
+		return nil, err
+	}
+	result := &VTRSResourceStat{
+		SubjectLib: raw["subject_lib"],
+		Video:      raw["video"],
+		Audio:      raw["audio"],
+		Image:      raw["image"],
+		Document:   raw["document"],
+		Link:       raw["link"],
+	}
+	for key, value := range raw {
+		switch key {
+		case "subject_lib", "video", "audio", "image", "document", "link":
+		default:
+			result.Other += value
+		}
+	}
+	return result, nil
 }
 
 // DeleteVTRSResources removes resources from a VTRS.
@@ -355,6 +387,93 @@ func (s *Service) SaveVTRSResources(ctx context.Context, vtrsID int, body *Uploa
 	u := fmt.Sprintf("/api/vtrses/%d/save-resources", vtrsID)
 	_, err := s.client.Post(ctx, u, body, nil)
 	return err
+}
+
+// CreateVTRSResourceFolder creates a folder within a VTRS resource classification tree.
+func (s *Service) CreateVTRSResourceFolder(ctx context.Context, vtrsID int, body *CreateVTRSResourceFolderRequest) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/resources/folder", vtrsID)
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// GetVTRSResourceCategoryStructure returns the resource folder tree for a classification category.
+func (s *Service) GetVTRSResourceCategoryStructure(ctx context.Context, vtrsID, categoryID int) (*VTRSResourceCategoryStructureResponse, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/resources/category/%d/structure", vtrsID, categoryID)
+	result := new(VTRSResourceCategoryStructureResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// MoveVTRSResources moves resources between folders or classifications.
+func (s *Service) MoveVTRSResources(ctx context.Context, vtrsID int, body *MoveVTRSResourcesRequest) error {
+	u := fmt.Sprintf("/api/vtrses/%d/resources/move", vtrsID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// GetVTRSResourceOperationPreCheck validates resource operations before they execute.
+func (s *Service) GetVTRSResourceOperationPreCheck(ctx context.Context, classificationID int, uploadReferenceIDs []int, operationType string) (VTRSResourceOperationPreCheckResponse, error) {
+	u := fmt.Sprintf("/api/vtrses/resources/classifications/%d/resource-operation-pre-check", classificationID)
+	query := map[string]string{
+		"upload_reference_ids": intsToCSV(uploadReferenceIDs),
+		"operation_type":       operationType,
+	}
+	var result VTRSResourceOperationPreCheckResponse
+	_, err := s.client.Get(ctx, addQueryParams(u, query), &result)
+	return result, err
+}
+
+// UpdateVTRSResource renames a VTRS resource.
+func (s *Service) UpdateVTRSResource(ctx context.Context, vtrsID, resourceID int, body *UpdateVTRSResourceRequest) error {
+	u := fmt.Sprintf("/api/vtrses/%d/resource/%d", vtrsID, resourceID)
+	_, err := s.client.Put(ctx, u, body, nil)
+	return err
+}
+
+// CreateVTRSMeeting creates a meeting under a VTRS.
+func (s *Service) CreateVTRSMeeting(ctx context.Context, vtrsID int, body interface{}) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/meeting", vtrsID)
+	var result json.RawMessage
+	_, err := s.client.Post(ctx, u, body, &result)
+	return result, err
+}
+
+// UpdateVTRSMeeting updates a VTRS meeting.
+func (s *Service) UpdateVTRSMeeting(ctx context.Context, vtrsID, meetingID int, body interface{}) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/meeting/%d", vtrsID, meetingID)
+	var result json.RawMessage
+	_, err := s.client.Put(ctx, u, body, &result)
+	return result, err
+}
+
+// ListVTRSMeetings returns paged VTRS meetings with frontend query encoding.
+func (s *Service) ListVTRSMeetings(ctx context.Context, vtrsID int, params *ListVTRSMeetingsParams) (json.RawMessage, error) {
+	query := map[string]string{}
+	if params != nil {
+		if params.Page > 0 {
+			query["page"] = fmt.Sprintf("%d", params.Page)
+		}
+		if params.PageSize > 0 {
+			query["page_size"] = fmt.Sprintf("%d", params.PageSize)
+		}
+		if params.Keyword != "" {
+			query["keyword"] = params.Keyword
+		}
+		if params.Status != "" {
+			query["status"] = params.Status
+		}
+		if params.ClassificationID != nil {
+			query["classification_id"] = fmt.Sprintf("%d", *params.ClassificationID)
+		}
+		if params.MeetingFormat != "" {
+			query["meeting_format"] = params.MeetingFormat
+		}
+	}
+	u := addQueryParams(fmt.Sprintf("/api/vtrses/%d/meetings", vtrsID), query)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
 }
 
 // ListVTRSSubjectLibs returns VTRS subject libraries.
@@ -410,11 +529,13 @@ func (s *Service) ListVTRSSubjectLibsWithParams(ctx context.Context, vtrsID int,
 	}
 	u := addQueryParams(fmt.Sprintf("/api/vtrses/%d/subject-libs", vtrsID), query)
 	var raw struct {
-		SubjectLibs []json.RawMessage `json:"subject_libs"`
+		SubjectLibs []*VTRSSubjectLib `json:"subject_libs"`
 		Page        int               `json:"page"`
 		PageSize    int               `json:"page_size"`
 		Pages       int               `json:"pages"`
 		Total       int               `json:"total"`
+		Start       int               `json:"start"`
+		End         int               `json:"end"`
 	}
 	_, err := s.client.Get(ctx, u, &raw)
 	if err != nil {
@@ -427,8 +548,147 @@ func (s *Service) ListVTRSSubjectLibsWithParams(ctx context.Context, vtrsID int,
 			PageSize: raw.PageSize,
 			Pages:    raw.Pages,
 			Total:    raw.Total,
+			Start:    raw.Start,
+			End:      raw.End,
 		},
 	}, nil
+}
+
+// ListVTRSMembers returns paged VTRS member options used by the frontend picker.
+func (s *Service) ListVTRSMembers(ctx context.Context, vtrsID int, params *ListVTRSMembersParams) (*VTRSMemberOptionsResponse, error) {
+	query := map[string]string{}
+	if params != nil {
+		if params.Keyword != "" {
+			query["keyword"] = params.Keyword
+		}
+		if params.Page > 0 {
+			query["page"] = fmt.Sprintf("%d", params.Page)
+		}
+		if params.PageSize > 0 {
+			query["page_size"] = fmt.Sprintf("%d", params.PageSize)
+		}
+		if params.Fields != "" {
+			query["fields"] = params.Fields
+		}
+	}
+	u := addQueryParams(fmt.Sprintf("/api/vtrses/%d/members", vtrsID), query)
+	var raw struct {
+		Members []*struct {
+			ID   int `json:"id"`
+			User *struct {
+				ID             int               `json:"id"`
+				UserNo         string            `json:"user_no,omitempty"`
+				Name           string            `json:"name,omitempty"`
+				AvatarSmallURL string            `json:"avatar_small_url,omitempty"`
+				Email          string            `json:"email,omitempty"`
+				MobilePhone    string            `json:"mobile_phone,omitempty"`
+				Department     *model.Department `json:"department,omitempty"`
+			} `json:"user,omitempty"`
+		} `json:"members"`
+		Page     int `json:"page"`
+		PageSize int `json:"page_size"`
+		Pages    int `json:"pages"`
+		Total    int `json:"total"`
+	}
+	_, err := s.client.Get(ctx, u, &raw)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]*VTRSMemberOption, 0, len(raw.Members))
+	for _, member := range raw.Members {
+		item := &VTRSMemberOption{ID: member.ID}
+		if member.User != nil {
+			item.UserID = member.User.ID
+			item.UserNo = member.User.UserNo
+			item.Name = member.User.Name
+			item.Avatar = member.User.AvatarSmallURL
+			item.Email = member.User.Email
+			item.MobilePhone = member.User.MobilePhone
+			if member.User.Department != nil {
+				item.Department = member.User.Department.Name
+			}
+		}
+		items = append(items, item)
+	}
+	return &VTRSMemberOptionsResponse{
+		Items: items,
+		Pagination: model.Pagination{
+			Page:     raw.Page,
+			PageSize: raw.PageSize,
+			Pages:    raw.Pages,
+			Total:    raw.Total,
+		},
+	}, nil
+}
+
+// DeleteVTRSMember removes a VTRS member.
+func (s *Service) DeleteVTRSMember(ctx context.Context, vtrsID, memberID int) error {
+	u := fmt.Sprintf("/api/vtrses/%d/members/%d", vtrsID, memberID)
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// TransferVTRSOwner transfers VTRS ownership to another member.
+func (s *Service) TransferVTRSOwner(ctx context.Context, vtrsID, ownerID int) error {
+	u := fmt.Sprintf("/api/vtrses/%d/transfer-owner", vtrsID)
+	_, err := s.client.Put(ctx, u, &TransferVTRSOwnerRequest{OwnerID: ownerID}, nil)
+	return err
+}
+
+// AddVTRSMembers adds members to a VTRS.
+func (s *Service) AddVTRSMembers(ctx context.Context, vtrsID int, userIDs []int) error {
+	u := fmt.Sprintf("/api/vtrses/%d/members", vtrsID)
+	_, err := s.client.Put(ctx, u, &UserIDsRequest{UserIDs: userIDs}, nil)
+	return err
+}
+
+// SelectVTRSMembers returns selectable member candidates for a VTRS.
+func (s *Service) SelectVTRSMembers(ctx context.Context, vtrsID int, params *SelectVTRSMembersParams) (json.RawMessage, error) {
+	page := 1
+	pageSize := 10
+	conditions := ""
+	if params != nil {
+		if params.Page > 0 {
+			page = params.Page
+		}
+		if params.PageSize > 0 {
+			pageSize = params.PageSize
+		}
+		switch value := params.Conditions.(type) {
+		case string:
+			conditions = value
+		case nil:
+		default:
+			payload, err := json.Marshal(value)
+			if err != nil {
+				return nil, err
+			}
+			conditions = string(payload)
+		}
+	}
+	u := fmt.Sprintf("/api/vtrses/%d/select-members?page=%d&page_size=%d&conditions=%s", vtrsID, page, pageSize, conditions)
+	var result json.RawMessage
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// DeleteVTRSPatrol removes the patrol chat/monitor state from a VTRS.
+func (s *Service) DeleteVTRSPatrol(ctx context.Context, vtrsID int) (json.RawMessage, error) {
+	u := fmt.Sprintf("/api/vtrses/%d/patrol", vtrsID)
+	var result json.RawMessage
+	_, err := s.client.Delete(ctx, u, &result)
+	return result, err
+}
+
+func intsToCSV(values []int) string {
+	if len(values) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(values))
+	for _, value := range values {
+		parts = append(parts, fmt.Sprintf("%d", value))
+	}
+	return strings.Join(parts, ",")
 }
 
 // --- Instruction Team Meeting ---

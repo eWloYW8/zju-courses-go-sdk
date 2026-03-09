@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -313,6 +314,82 @@ func (s *Service) GetHomeworkDuplicateRateWithSubmissionID(ctx context.Context, 
 	return result, err
 }
 
+// AddUploadsToDuplicateLib adds uploads into a course homework duplicate library.
+func (s *Service) AddUploadsToDuplicateLib(ctx context.Context, courseID int, body *AddDuplicateLibUploadsRequest) error {
+	u := fmt.Sprintf("/api/course/%d/homework/duplicate-lib", courseID)
+	_, err := s.client.Post(ctx, u, body, nil)
+	return err
+}
+
+// DeleteUploadsFromDuplicateLib removes uploads from a course homework duplicate library.
+func (s *Service) DeleteUploadsFromDuplicateLib(ctx context.Context, courseID int, uploadIDs []int) error {
+	u := sdk.AddQueryParams(fmt.Sprintf("/api/course/%d/homework/duplicate-lib", courseID), map[string]string{
+		"upload_ids": intsToCSV(uploadIDs),
+	})
+	_, err := s.client.Delete(ctx, u, nil)
+	return err
+}
+
+// ListDuplicateLibUploads returns paged duplicate-library uploads with frontend-compatible defaults and condition encoding.
+func (s *Service) ListDuplicateLibUploads(ctx context.Context, courseID int, params ListDuplicateLibUploadsParams) (*DuplicateLibUploadsResponse, error) {
+	page := params.Page
+	if page == 0 {
+		page = 1
+	}
+	pageSize := params.PageSize
+	if pageSize == 0 {
+		pageSize = 10
+	}
+	query := map[string]string{
+		"page":      strconv.Itoa(page),
+		"page_size": strconv.Itoa(pageSize),
+	}
+	if encoded := encodeHomeworkConditions(params.Conditions); encoded != "" {
+		query["conditions"] = encoded
+	}
+	u := sdk.AddQueryParams(fmt.Sprintf("/api/course/%d/homework/duplicate-lib", courseID), query)
+	result := new(DuplicateLibUploadsResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetLastDuplicateDetectTask returns the latest duplicate-detect task for a homework.
+func (s *Service) GetLastDuplicateDetectTask(ctx context.Context, homeworkID int, status string) (*DuplicateDetectTask, error) {
+	params := map[string]string{}
+	if status != "" {
+		params["status"] = status
+	}
+	u := sdk.AddQueryParams(fmt.Sprintf("/api/homework/%d/duplicate-detect/task", homeworkID), params)
+	result := new(DuplicateDetectTask)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// GetDuplicateDetectRawFile returns the raw duplicate-detect source file contents.
+func (s *Service) GetDuplicateDetectRawFile(ctx context.Context, fileKey string) (string, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodGet, fmt.Sprintf("/api/duplicate-detect/file/%s/raw", fileKey), nil)
+	if err != nil {
+		return "", err
+	}
+	_, data, err := s.client.DoBytes(req)
+	return string(data), err
+}
+
+// GetDuplicateDetectResult returns duplicate-detect detail results for a homework file.
+func (s *Service) GetDuplicateDetectResult(ctx context.Context, homeworkID int, fileKey string) (*DuplicateDetectTask, error) {
+	u := fmt.Sprintf("/api/homework/%d/duplicate-detect-result/file/%s", homeworkID, fileKey)
+	result := new(DuplicateDetectTask)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// RequestDuplicateDetectReportDownload requests a downloadable third-party duplicate report.
+func (s *Service) RequestDuplicateDetectReportDownload(ctx context.Context, body *DuplicateDetectReportDownloadRequest) (*DuplicateDetectReportDownloadInfo, error) {
+	result := new(DuplicateDetectReportDownloadInfo)
+	_, err := s.client.Post(ctx, "/api/duplicate-detect/report/download", body, result)
+	return result, err
+}
+
 // GetInProgressHomeworks returns in-progress homeworks.
 func (s *Service) GetInProgressHomeworks(ctx context.Context) ([]InProgressHomework, error) {
 	var result []InProgressHomework
@@ -336,6 +413,40 @@ func (s *Service) DownloadHomeworkZip(ctx context.Context, activityID int) (Home
 	u := fmt.Sprintf("/api/zip-status/homework-zip/%d", activityID)
 	result := make(HomeworkZipStatusResponse)
 	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// StartHomeworkAIGenerate starts the AI homework generation SSE stream.
+func (s *Service) StartHomeworkAIGenerate(ctx context.Context, courseID, homeworkID int, body *HomeworkAIGenerateRequest) (*http.Response, error) {
+	req, err := s.client.NewRequest(ctx, http.MethodPost, fmt.Sprintf("/api/courses/%d/homework/%d/ai-generate", courseID, homeworkID), body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	return s.client.HTTPClient().Do(req)
+}
+
+// GetSubmissionAnalysisStatus returns whether a submission can be reanalyzed.
+func (s *Service) GetSubmissionAnalysisStatus(ctx context.Context, submissionID int, kind string) (SubmissionAnalysisStatusResponse, error) {
+	u := fmt.Sprintf("/api/submissions/%d/%s/analysis/can-reanalyze", submissionID, kind)
+	result := make(SubmissionAnalysisStatusResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// GetSubmissionAnalysis returns the stored AI analysis payload for a submission.
+func (s *Service) GetSubmissionAnalysis(ctx context.Context, submissionID int, kind string) (SubmissionAnalysisResponse, error) {
+	u := fmt.Sprintf("/api/submissions/%d/%s/analysis", submissionID, kind)
+	result := make(SubmissionAnalysisResponse)
+	_, err := s.client.Get(ctx, u, &result)
+	return result, err
+}
+
+// SaveSubmissionAnalysis saves or re-saves AI analysis content for a submission.
+func (s *Service) SaveSubmissionAnalysis(ctx context.Context, submissionID int, kind string, body *SubmissionAnalysisRequest) (SubmissionAnalysisResponse, error) {
+	u := fmt.Sprintf("/api/submissions/%d/%s/analysis", submissionID, kind)
+	result := make(SubmissionAnalysisResponse)
+	_, err := s.client.Post(ctx, u, body, &result)
 	return result, err
 }
 
@@ -374,4 +485,19 @@ func intsToCSV(ids []int) string {
 		values[i] = strconv.Itoa(id)
 	}
 	return strings.Join(values, ",")
+}
+
+func encodeHomeworkConditions(conditions any) string {
+	switch value := conditions.(type) {
+	case nil:
+		return ""
+	case string:
+		return value
+	default:
+		payload, err := json.Marshal(value)
+		if err != nil {
+			return ""
+		}
+		return string(payload)
+	}
 }

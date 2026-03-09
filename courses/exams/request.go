@@ -5,6 +5,12 @@ type CreateSubjectLibRequest struct {
 	ParentID int    `json:"parent_id,omitempty"`
 }
 
+type ListCourseExamListParams struct {
+	Page       int
+	PageSize   int
+	Conditions any
+}
+
 type BatchCopySubjectLibsRequest struct {
 	LibIDs    []int `json:"lib_ids"`
 	SubjectID int   `json:"subject_id,omitempty"`
@@ -20,6 +26,11 @@ type UpdateCoursewareQuizSubjectsRequest struct {
 }
 
 type CoursewareQuizSubjectsRequest = UpdateCoursewareQuizSubjectsRequest
+
+type CreateCoursewareQuizRequest struct {
+	UploadReferenceID int `json:"upload_reference_id,omitempty"`
+	Subjects          any `json:"subjects,omitempty"`
+}
 
 type GenerateCoursewareQuizSubjectsRequest struct {
 	UploadID               int      `json:"upload_id,omitempty"`
@@ -50,11 +61,29 @@ type UpdateExamSubjectExplanationRequest struct {
 	AnswerExplanation string `json:"answer_explanation,omitempty"`
 }
 
+type ListExamRetakeRecordsParams struct {
+	Page     int
+	PageSize int
+}
+
 type ExamScoreDistributionConditions map[string]any
 
 type MakeUpExamRequest map[string]any
 
 type MakeupExamRequest map[string]any
+
+type ExamSubjectsStatParams struct {
+	ExamPaperType string
+	Conditions    any
+}
+
+type ExamScoreListParams struct {
+	Conditions any
+}
+
+type ExamExamineesParams struct {
+	Conditions any
+}
 
 type SHTVUSearchSubjectsParams struct {
 	Chapters     string `json:"chapters,omitempty"`
@@ -81,4 +110,68 @@ type SubjectGroupRequest struct {
 	ReferrerType string `json:"referrer_type,omitempty"`
 	ReferrerID   int    `json:"referrer_id,omitempty"`
 	Sort         int    `json:"sort,omitempty"`
+}
+
+type ClassroomStatusRequest struct {
+	Status int `json:"status"`
+}
+
+type UpdateClassroomSubjectStatusRequest struct {
+	Status int `json:"status"`
+}
+
+type ClassroomScoreListParams struct {
+	IgnoreAvatar bool
+	ExamineeIDs  []int
+}
+
+type CoursewareQuizSubjectStatisticParams struct {
+	Page       int
+	PageSize   int
+	Conditions any
+}
+
+type SearchExamSubjectsParams struct {
+	IsMakeupExam bool
+	Keyword      string
+	SubjectType  string
+}
+
+type UpdateExamSubmissionCommentRequest struct {
+	Comment string `json:"comment,omitempty"`
+}
+
+type CampusSubjectSelection struct {
+	ID    int    `json:"id"`
+	Count int    `json:"count"`
+	Point string `json:"point,omitempty"`
+}
+
+type ImportSubjectsFromCampusConditions struct {
+	ExamSubjectTypes            []string `json:"exam_subject_types,omitempty"`
+	ExamSubjectDifficultyLevels []string `json:"exam_subject_difficulty_levels,omitempty"`
+}
+
+type ImportSubjectsFromCampusRequest struct {
+	Items                       []*CampusSubjectSelection           `json:"items"`
+	Settings                    any                                 `json:"settings,omitempty"`
+	ExamSubjectTypes            []string                            `json:"exam_subject_types,omitempty"`
+	ExamSubjectDifficultyLevels []string                            `json:"exam_subject_difficulty_levels,omitempty"`
+	Conditions                  *ImportSubjectsFromCampusConditions `json:"conditions,omitempty"`
+}
+
+type ExamPointRule struct {
+	RuleName            string `json:"rule_name,omitempty"`
+	RulePoint           string `json:"rule_point,omitempty"`
+	RuleNumber          string `json:"rule_number,omitempty"`
+	RuleDifficultyLevel string `json:"rule_difficulty_level,omitempty"`
+}
+
+type ExamSubjectPointsAndRules struct {
+	SubjectIndex int              `json:"subject_index"`
+	PointRules   []*ExamPointRule `json:"point_rules"`
+}
+
+type UpdateExamPointsAndRulesRequest struct {
+	SubjectsPointsAndRules []*ExamSubjectPointsAndRules `json:"subjects_points_and_rules"`
 }

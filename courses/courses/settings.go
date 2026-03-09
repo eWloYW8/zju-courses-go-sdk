@@ -50,6 +50,21 @@ func (s *Service) ResetCourseAccessCode(ctx context.Context, courseID int) (*Cou
 	return result, err
 }
 
+// ValidateCourseAccessCode validates a join-course access code through the frontend popup endpoint.
+func (s *Service) ValidateCourseAccessCode(ctx context.Context, accessCode string) (*CourseAccessCodeValidationResponse, error) {
+	u := fmt.Sprintf("/api/course/access-code/%s/validate", accessCode)
+	result := new(CourseAccessCodeValidationResponse)
+	_, err := s.client.Get(ctx, u, result)
+	return result, err
+}
+
+// ListTeamTeachingOpenedOrgs returns organizations available in the team-teaching invite popup.
+func (s *Service) ListTeamTeachingOpenedOrgs(ctx context.Context) (*OpenedOrgsResponse, error) {
+	result := new(OpenedOrgsResponse)
+	_, err := s.client.Get(ctx, "/api/toggle-opened-orgs?toggle=org_team_teaching", result)
+	return result, err
+}
+
 // --- Completion Criteria ---
 
 // ListCompletionCriteria returns completion criteria.

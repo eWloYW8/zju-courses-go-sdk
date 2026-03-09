@@ -8,3 +8,21 @@ type CreateRollcallRequest struct {
 	IsNumber bool   `json:"is_number,omitempty"`
 	Type     string `json:"type,omitempty"`
 }
+
+type AnswerNumberRollcallRequest struct {
+	NumberCode string `json:"numberCode,omitempty"`
+}
+
+type ListTimetableRollcallsParams struct {
+	CourseIDs    []int
+	RollcallDate string
+}
+
+type UpdateCourseStudentRollcallsRequest struct {
+	StudentRollcalls []*UpdateCourseStudentRollcall `json:"student_rollcalls"`
+}
+
+type UpdateCourseStudentRollcall struct {
+	StudentRollcallID int    `json:"student_rollcall_id"`
+	StudentStatus     string `json:"student_status"`
+}
